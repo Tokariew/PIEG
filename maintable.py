@@ -433,19 +433,19 @@ class MainTable:
         if self.columns - 2 > c:
             # normals
             if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['Y', c], tab.loc['Beta', c], lhi])) and tab.loc[
-                'Beta', c] != 0:
+                    'Beta', c] != 0:
                 val = (tab.loc['alpha', c] * tab.loc['Y', c] - lhi) / tab.loc['Beta', c]
                 self.change_value('H', c, val, 36)
             if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['H', c], tab.loc['Beta', c], lhi])) and tab.loc[
-                'alpha', c] != 0:
+                        'alpha', c] != 0:
                 val = (tab.loc['H', c] * tab.loc['Beta', c] + lhi) / tab.loc['alpha', c]
                 self.change_value('Y', c, val, 36)
             if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['Y', c], tab.loc['H', c], lhi])) and tab.loc[
-                'H', c] != 0:
+                    'H', c] != 0:
                 val = (tab.loc['alpha', c] * tab.loc['Y', c] - lhi) / tab.loc['H', c]
                 self.change_value('Beta', c, val, 36)
             if not np.any(np.isnan([tab.loc['H', c], tab.loc['Y', c], tab.loc['Beta', c], lhi])) and tab.loc[
-                'Y', c] != 0:
+                    'Y', c] != 0:
                 val = (tab.loc['H', c] * tab.loc['Beta', c] + lhi) / tab.loc['Y', c]
                 self.change_value('alpha', c, val, 36)
             if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['Y', c], tab.loc['Beta', c], tab.loc['H', c]])):
@@ -489,7 +489,7 @@ class MainTable:
                 self.change_value('H', c, val, 37)
             if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['H', c], tab.loc['Beta', c - 1], lhi])) and \
                     tab.loc['alpha', c - 1] != 0:
-                val = (tab.loc['H', c] * tab.loc['Beta', c - 1] - lhi) / tab.loc['alpha', c - 1]
+                val = (tab.loc['H', c] * tab.loc['Beta', c - 1] + lhi) / tab.loc['alpha', c - 1]
                 self.change_value('Y', c, val, 37)
             if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['Y', c], tab.loc['H', c], lhi])) and \
                     tab.loc['H', c] != 0:
@@ -535,7 +535,7 @@ class MainTable:
         lhi = self.LHI
         if 0 < c <= self.columns - 2:
             if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['V', c], tab.loc['Q', c], lhi])) and (
-                    tab.loc['Beta', c] * tab.loc['Q', c] - tab.loc['V', c]) != 0:
+                    tab.loc['Beta', c] * (tab.loc['Q', c] - tab.loc['V', c])) != 0:
                 val = lhi * (1 - tab.loc['V', c]) / (tab.loc['Beta', c] * (tab.loc['Q', c] - tab.loc['V', c]))
                 self.change_value('H', c, val, 39)
             if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['H', c], tab.loc['Q', c], lhi])) and (
@@ -552,7 +552,8 @@ class MainTable:
                     tab.loc['H', c] * (tab.loc['Q', c] - tab.loc['V', c])) != 0:
                 val = (lhi * (1 - tab.loc['V', c])) / (tab.loc['H', c] * (tab.loc['Q', c] - tab.loc['V', c]))
                 self.change_value('Beta', c, val, 39)
-            if not np.any(np.isnan([tab.loc['H', c], tab.loc['V', c], tab.loc['Q', c], tab.loc['Beta', c]])):
+            if not np.any(np.isnan([tab.loc['H', c], tab.loc['V', c], tab.loc['Q', c], tab.loc['Beta', c]])) and (
+                    tab.loc['V', c] - 1) != 0:
                 val = (tab.loc['Beta', c] * tab.loc['H', c] * (tab.loc['V', c] - tab.loc['Q', c])) / (
                     tab.loc['V', c] - 1)
                 self.change_lhi(val)
@@ -562,29 +563,29 @@ class MainTable:
         c = column
         lhi = self.LHI
         if 0 < c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['Y', c - 1], tab.loc['alpha', c], tab.loc['Q', c], lhi])) and (
-                    lhi * (tab.loc['Q', c] - 1) + tab.loc['alpha', c] * tab.loc['Y', c - 1]) != 0:
-                val = tab.loc['alpha', c] * tab.loc['Y', c - 1] * tab.loc['Q', c] / (
-                    lhi * (tab.loc['Q', c] - 1) + tab.loc['alpha', c] * tab.loc['Y', c - 1])
+            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['alpha', c - 1], tab.loc['Q', c], lhi])) and (
+                    lhi * (tab.loc['Q', c] - 1) + tab.loc['alpha', c - 1] * tab.loc['Y', c]) != 0:
+                val = tab.loc['alpha', c - 1] * tab.loc['Y', c] * tab.loc['Q', c] / (
+                    lhi * (tab.loc['Q', c] - 1) + tab.loc['alpha', c - 1] * tab.loc['Y', c])
                 self.change_value('V', c, val, 40)
-            if not np.any(np.isnan([tab.loc['Y', c - 1], tab.loc['alpha', c], tab.loc['V', c], lhi])) and (
-                    tab.loc['alpha', c] * tab.loc['Y', c - 1] - lhi * tab.loc['V', c]) != 0:
-                val = tab.loc['V', c] * (lhi - tab.loc['alpha', c] * tab.loc['Y', c - 1]) / (
-                    lhi * tab.loc['V', c] - tab.loc['alpha', c] * tab.loc['Y', c - 1])
+            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['alpha', c - 1], tab.loc['V', c], lhi])) and (
+                    tab.loc['alpha', c - 1] * tab.loc['Y', c] - lhi * tab.loc['V', c]) != 0:
+                val = tab.loc['V', c] * (lhi - tab.loc['alpha', c - 1] * tab.loc['Y', c]) / (
+                    lhi * tab.loc['V', c] - tab.loc['alpha', c - 1] * tab.loc['Y', c])
                 self.change_value('Q', c, val, 40)
-            if not np.any(np.isnan([tab.loc['Y', c - 1], tab.loc['V', c], tab.loc['Q', c], lhi])) and \
-                    tab.loc['Y', c - 1] * (tab.loc['V', c] - tab.loc['Q', c]) != 0:
+            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['V', c], tab.loc['Q', c], lhi])) and \
+                    tab.loc['Y', c] * (tab.loc['V', c] - tab.loc['Q', c]) != 0:
                 val = tab.loc['V', c] * lhi * (1 - tab.loc['Q', c]) / (
-                    tab.loc['Y', c - 1] * (tab.loc['V', c] - tab.loc['Q', c]))
+                    tab.loc['Y', c] * (tab.loc['V', c] - tab.loc['Q', c]))
                 self.change_value('alpha', c, val, 40)
-            if not np.any(np.isnan([tab.loc['V', c], tab.loc['alpha', c], tab.loc['Q', c], lhi])) and \
-                    tab.loc['alpha', c] * (tab.loc['V', c] - tab.loc['Q', c]) != 0:
+            if not np.any(np.isnan([tab.loc['V', c], tab.loc['alpha', c - 1], tab.loc['Q', c], lhi])) and \
+                    tab.loc['alpha', c - 1] * (tab.loc['V', c] - tab.loc['Q', c]) != 0:
                 val = tab.loc['V', c] * lhi * (1 - tab.loc['Q', c]) / (
-                    tab.loc['alpha', c] * (tab.loc['V', c] - tab.loc['Q', c]))
-                self.change_value('Y', c - 1, val, 40)
-            if not np.any(np.isnan([tab.loc['Y', c - 1], tab.loc['alpha', c], tab.loc['Q', c], tab.loc['V', c]])) and (
+                    tab.loc['alpha', c - 1] * (tab.loc['V', c] - tab.loc['Q', c]))
+                self.change_value('Y', c, val, 40)
+            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['alpha', c - 1], tab.loc['Q', c], tab.loc['V', c]])) and (
                     tab.loc['V', c] * (1 - tab.loc['Q', c])) != 0:
-                val = tab.loc['alpha', c] * tab.loc['Y', c] * (tab.loc['V', c] - tab.loc['Q', c]) / (
+                val = tab.loc['alpha', c - 1] * tab.loc['Y', c] * (tab.loc['V', c] - tab.loc['Q', c]) / (
                     tab.loc['V', c] * (1 - tab.loc['Q', c]))
                 self.change_lhi(val)
 
@@ -701,6 +702,20 @@ class MainTable:
                     tab.loc['d', c] != 0:
                 val = (tab.loc['H', c] * tab.loc['Y', c + 1] - tab.loc['H', c + 1] * tab.loc['Y', c]) / tab.loc['d', c]
                 self.change_lhi(val)
+
+    def plot(self):
+        import matplotlib.pyplot as plt
+        y=list(self.table.loc['Y'])
+        h=list(self.table.loc['H'])
+        d=list(self.table.loc['d',0:self.columns-2])
+        d1 = [0]
+        for i, val in enumerate(d):
+            d1.append(d1[i]+d[i])
+        plt.plot(d1,h)
+        plt.plot(d1,y)
+        plt.axhline(y=0, xmin=d1[0],xmax=d1[-1], color = 'k')
+        print (d1,h,y)
+
 
 
 cols = input("Podaj liczbę elementów: ")
