@@ -703,6 +703,25 @@ class MainTable:
                 val = (tab.loc['H', c] * tab.loc['Y', c + 1] - tab.loc['H', c + 1] * tab.loc['Y', c]) / tab.loc['d', c]
                 self.change_lhi(val)
 
+    def align_yaxis(self,ax1, v1, ax2, v2):
+        _, y1 = ax1.transData.transform((0, v1))
+        _, y2 = ax2.transData.transform((0, v2))
+        self.adjust_yaxis(ax2,(y1-y2)/2,v2)
+        self.adjust_yaxis(ax1,(y2-y1)/2,v1)
+
+    def adjust_yaxis(self, ax,ydif,v):
+        inv = ax.transData.inverted()
+        _, dy = inv.transform((0, 0)) - inv.transform((0, ydif))
+        miny, maxy = ax.get_ylim()
+        miny, maxy = miny - v, maxy - v
+        if -miny>maxy or (-miny==maxy and dy > 0):
+            nminy = miny
+            nmaxy = miny*(maxy+dy)/(miny+dy)
+        else:
+            nmaxy = maxy
+            nminy = maxy*(miny+dy)/(maxy+dy)
+        ax.set_ylim(nminy-.5+v, nmaxy+v)
+
     def plot(self):
         import matplotlib.pyplot as plt
         y=list(self.table.loc['Y'])
@@ -711,13 +730,17 @@ class MainTable:
         d1 = [0]
         for i, val in enumerate(d):
             d1.append(d1[i]+d[i])
-        plt.plot(d1,h)
-        plt.plot(d1,y)
+        fig, ax1 = plt.subplots()
+        ax1.plot(d1,h, label='h')
+        ax2 = ax1.twinx()
+        ax2.plot(d1,y, label='y', color='r')
+        fig.legend()
         plt.axhline(y=0, xmin=d1[0],xmax=d1[-1], color = 'k')
+        self.align_yaxis(ax2, 0, ax1, 0)
         print (d1,h,y)
 
 
 
 cols = input("Podaj liczbę elementów: ")
-mkol = MainTable(int(cols) + 1)
-a = mkol.change_value
+table = MainTable(int(cols) + 1)
+change_value = table.change_value
