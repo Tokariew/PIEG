@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import matplotlib.lines as lines
 
 
 # will provide scientific notation for big numbers
@@ -11,7 +12,7 @@ import numpy as np
 # todo stop comparing to zero…
 
 class MainTable:
-    ind = ['f', 'd', 'H', 'alpha', 'V', 'L', 'Y', 'Beta', 'Q', 'T']
+    ind = ['f', 'd', 'H', 'alpha', 'V', 'L', 'Y', 'Beta', 'Q', 'T', 'FIcz']
 
     def __init__(self, columns):
         """main data structure for code. Table is already preformat, to blank spaces are blank, like in original"""
@@ -21,17 +22,19 @@ class MainTable:
         tab = self.table
         tab.loc['f', 0] = ''
         tab.loc['V':'L', 0] = ''
-        tab.loc['Q':'T', 0] = ''
+        tab.loc['Q':'FIcz', 0] = ''
         tab.loc['f':'d', self.columns - 1] = ''
         tab.loc['alpha':'L', self.columns - 1] = ''
-        tab.loc['Beta':'T', self.columns - 1] = ''
+        tab.loc['Beta':'FIcz', self.columns - 1] = ''
         self.LHI = np.nan
+        self.winieta = np.nan
 
     def change_value(self, row, column, value, func=0):
         tab = self.table
         if row in MainTable.ind:
             if np.isnan(tab.loc[row, column]):
-                tab.set_value(row, column, value)
+                tab.at[row, column] = value
+                #tab.set_value(row, column, value)
                 print('{}{} is now {} from {}'.format(row, column, value, func))
                 self.analise_input(row, column)
 
@@ -40,6 +43,11 @@ class MainTable:
             self.LHI = value
             print('LHI is now {} from {}'.format(value, func))
             self.check_lhi_function()
+
+    def set_winieta(self, value, func=0):
+        if np.isnan(self.winieta):
+            self.winieta = float(value)
+            print('Współczynnik winietowania is now {} from {}'.format(value, func))
 
     def analise_input(self, row, column):
         if row == MainTable.ind[0]:
@@ -79,6 +87,7 @@ class MainTable:
         self.analyse43(column)
 
     def check_h_function(self, column):
+        self.analyse1(column)
         self.analyse15(column)
         self.analyse16(column)
         self.analyse18(column)
@@ -123,6 +132,7 @@ class MainTable:
         self.analyse19(column)
 
     def check_y_function(self, column):
+        self.analyse1(column)
         self.analyse22(column)
         self.analyse23(column)
         self.analyse25(column)
@@ -173,6 +183,16 @@ class MainTable:
                 self.analyse41(i)
                 self.analyse42(i)
                 self.analyse43(i)
+
+    def analyse1(self, column):
+        tab = self.table
+        c = column
+        if 1 <= c <= self.columns-2:
+            if not np.any(np.isnan([tab.loc['H',c], tab.loc['Y',c]])):
+                a = 2 * np.abs(tab.loc['H',c])
+                b = 2 * (np.abs(tab.loc['Y', c]) + self.winieta * np.abs(tab.loc['H', c]))
+                val = np.max([a,b])
+                self.change_value('FIcz', c, val, 1)
 
     def analyse14(self, column):
         tab = self.table
@@ -727,16 +747,19 @@ class MainTable:
         y=list(self.table.loc['Y'])
         h=list(self.table.loc['H'])
         d=list(self.table.loc['d',0:self.columns-2])
+        ficz=list(self.table.loc['FIcz'])
         d1 = [0]
         for i, val in enumerate(d):
             d1.append(d1[i]+d[i])
-        fig, ax1 = plt.subplots()
-        ax1.plot(d1,h, label='h')
-        ax2 = ax1.twinx()
-        ax2.plot(d1,y, label='y', color='r')
-        fig.legend()
-        plt.axhline(y=0, xmin=d1[0],xmax=d1[-1], color = 'k')
-        self.align_yaxis(ax2, 0, ax1, 0)
+        #fig, ax1 = plt.subplots()
+        plt.plot(d1,h, label='h')
+        #ax2 = ax1.twinx()
+        plt.plot(d1,y, label='y', color='r')
+        plt.legend()
+        #plt.axhline(y=0, xmin=d1[0],xmax=d1[-1], color = 'k')
+        for i, k in zip(d1[1:-1], ficz[1:-1]):
+            plt.plot([i,i], [-k/2, k/2], color='black')
+        #self.align_yaxis(ax2, 0, ax1, 0)
         print (d1,h,y)
 
 
@@ -744,3 +767,5 @@ class MainTable:
 cols = input("Podaj liczbę elementów: ")
 table = MainTable(int(cols) + 1)
 change_value = table.change_value
+win = input("Podaj współczynnik winietowania: ")
+table.set_winieta(win)
