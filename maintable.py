@@ -1,7 +1,7 @@
-import pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.lines as lines
-
+import pandas as pd
+from matplotlib.figure import figaspect
 
 # will provide scientific notation for big numbers
 
@@ -12,42 +12,74 @@ import matplotlib.lines as lines
 # todo stop comparing to zero…
 
 class MainTable:
-    ind = ['f', 'd', 'H', 'alpha', 'V', 'L', 'Y', 'Beta', 'Q', 'T', 'FIcz']
+    ind = ['f', 'd', 'H', 'alpha', 'V', 'L', 'Y', 'Beta', 'Q', 'T', 'phi', 'vignette', 'lhi']
 
     def __init__(self, columns):
         """main data structure for code. Table is already preformat, to blank spaces are blank, like in original"""
         self.columns = columns
         self.table = pd.DataFrame(index=MainTable.ind, columns=list(range(self.columns)), dtype=np.float64)
-        # some extra precision
         tab = self.table
         tab.loc['f', 0] = ''
         tab.loc['V':'L', 0] = ''
-        tab.loc['Q':'FIcz', 0] = ''
+        tab.loc['Q':'phi', 0] = ''
         tab.loc['f':'d', self.columns - 1] = ''
         tab.loc['alpha':'L', self.columns - 1] = ''
-        tab.loc['Beta':'FIcz', self.columns - 1] = ''
+        tab.loc['Beta':'phi', self.columns - 1] = ''
+        self.magnify = []
         self.LHI = np.nan
-        self.winieta = np.nan
+        self.vignette = np.nan
+        self.prev_tables = []
 
     def change_value(self, row, column, value, func=0):
         tab = self.table
+        if np.isnan(value):
+            print('A ty co robisz, czemu mi sie buntuje', row, column)
+            value = 0
+        if func == 0:
+            self.prev_tables.append(tab.copy(True))
+            print('appending with:', row, column)
         if row in MainTable.ind:
             if np.isnan(tab.loc[row, column]):
                 tab.at[row, column] = value
-                #tab.set_value(row, column, value)
                 print('{}{} is now {} from {}'.format(row, column, value, func))
                 self.analise_input(row, column)
+
+    def undo_changes(self):
+        self.table = self.prev_tables.pop()
+        self.vignette = self.table.loc['vignette', 0]
+        self.LHI = self.table.loc['lhi', 0]
+
+    def magnification(self, from_col, to_col, magn, var):
+        if from_col > to_col:
+            from_col, to_col = to_col, from_col
+        if to_col >= self.columns:
+            raise ValueError()
+        else:
+            for item in self.magnify:
+                if from_col == item['from'] and to_col == item['to']:
+                    return
+            self.magnify.append({'from': from_col, 'to': to_col, 'magn': magn, 'type': var})
+
+    def iterate(self, row, col, from_col, to_col, var, target_dimension, start_value):
+        tab = self.table
+        if not np.isnan(tab.loc[row, col]):
+            return
 
     def change_lhi(self, value, func=0):
         if np.isnan(self.LHI):
             self.LHI = value
+            self.table.loc['lhi', 0] = self.LHI
             print('LHI is now {} from {}'.format(value, func))
             self.check_lhi_function()
 
-    def set_winieta(self, value, func=0):
-        if np.isnan(self.winieta):
-            self.winieta = float(value)
-            print('Współczynnik winietowania is now {} from {}'.format(value, func))
+    def set_vignetting(self, value):
+        if np.isnan(self.vignette):
+            self.prev_tables.append(self.table.copy(True))
+            self.vignette = float(value)
+            for i in range(self.columns):
+                self.table.loc['vignette', i] = self.vignette
+                self.analyse1(i)
+            print('Współczynnik winietowania is now {}'.format(value))
 
     def analise_input(self, row, column):
         if row == MainTable.ind[0]:
@@ -70,6 +102,16 @@ class MainTable:
             self.check_q_function(column)
         elif row == MainTable.ind[9]:
             self.check_t_function(column)
+        if len(self.magnify) > 0:
+            for i, elem in enumerate(self.magnify):
+                from_col, to_col = elem['from'], elem['to']
+                if elem['type'] == 'V':
+                    if not np.all([np.isnan(self.table.loc['alpha', from_col]), np.isnan(self.table.loc['alpha', to_col])]):
+                        self.analyse44(i)
+                elif elem['type'] == 'Q':
+                    if not np.all([np.isnan(self.table.loc['Beta', from_col]), np.isnan(self.table.loc['Beta', to_col])]):
+                        self.analyse45(i)
+
         self.check_lhi_function()
 
     def check_f_function(self, column):
@@ -187,12 +229,12 @@ class MainTable:
     def analyse1(self, column):
         tab = self.table
         c = column
-        if 1 <= c <= self.columns-2:
-            if not np.any(np.isnan([tab.loc['H',c], tab.loc['Y',c]])):
-                a = 2 * np.abs(tab.loc['H',c])
-                b = 2 * (np.abs(tab.loc['Y', c]) + self.winieta * np.abs(tab.loc['H', c]))
-                val = np.max([a,b])
-                self.change_value('FIcz', c, val, 1)
+        if 1 <= c <= self.columns - 2:
+            if not np.any(np.isnan([self.vignette, tab.loc['H', c], tab.loc['Y', c]])):
+                a = 2 * np.abs(tab.loc['H', c])
+                b = 2 * (np.abs(tab.loc['Y', c]) + self.vignette * np.abs(tab.loc['H', c]))
+                val = np.max([a, b])
+                self.change_value('phi', c, val, 1)
 
     def analyse14(self, column):
         tab = self.table
@@ -213,7 +255,7 @@ class MainTable:
         c = column
         if 1 <= c <= column - 2:
             if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['H', c], tab.loc['f', c]])) and \
-                            tab.loc['f', c] != 0:
+                    tab.loc['f', c] != 0:
                 val = tab.loc['alpha', c - 1] + tab.loc['H', c] / tab.loc['f', c]
                 self.change_value('alpha', c, val, 15)
             if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['H', c], tab.loc['f', c]])) and tab.loc['f', c] != 0:
@@ -223,7 +265,7 @@ class MainTable:
                 val = tab.loc['f', c] * (tab.loc['alpha', c] - tab.loc['alpha', c - 1])
                 self.change_value('H', c, val, 15)
             if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['alpha', c - 1], tab.loc['H', c]])) and (
-                        tab.loc['alpha', c] - tab.loc['alpha', c - 1]) != 0:
+                    tab.loc['alpha', c] - tab.loc['alpha', c - 1]) != 0:
                 val = tab.loc['H', c] / (tab.loc['alpha', c] - tab.loc['alpha', c - 1])
                 self.change_value('f', c, val, 15)
 
@@ -232,18 +274,18 @@ class MainTable:
         c = column
         if 1 <= c <= self.columns - 2:
             if not np.any(np.isnan([tab.loc['V', c], tab.loc['H', c], tab.loc['f', c]])) and (
-                        tab.loc['f', c] * (1 - tab.loc['V', c])) != 0:
+                    tab.loc['f', c] * (1 - tab.loc['V', c])) != 0:
                 val = - tab.loc['H', c] / (tab.loc['f', c] * (tab.loc['V', c] - 1))
                 self.change_value('alpha', c, val, 16)
             if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['H', c], tab.loc['f', c]])) and (
-                        tab.loc['alpha', c] * tab.loc['f', c]) != 0:
+                    tab.loc['alpha', c] * tab.loc['f', c]) != 0:
                 val = 1 - tab.loc['H', c] / (tab.loc['f', c] * tab.loc['alpha', c])
                 self.change_value('V', c, val, 16)
             if not np.any(np.isnan([tab.loc['V', c], tab.loc['alpha', c], tab.loc['f', c]])):
                 val = tab.loc['alpha', c] * tab.loc['f', c] * (1 - tab.loc['V', c])
                 self.change_value('H', c, val, 16)
             if not np.any(np.isnan([tab.loc['V', c], tab.loc['H', c], tab.loc['alpha', c]])) and (
-                        tab.loc['alpha', c] * (1 - tab.loc['V', c])) != 0:
+                    tab.loc['alpha', c] * (1 - tab.loc['V', c])) != 0:
                 val = tab.loc['H', c] / (tab.loc['alpha', c] * (1 - tab.loc['V', c]))
                 self.change_value('f', c, val, 16)
 
@@ -263,21 +305,21 @@ class MainTable:
         c = column
         if 1 <= c <= self.columns - 2:
             if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['H', c], tab.loc['L', c]])) and (
-                            tab.loc['alpha', c - 1] * tab.loc['L', c] + tab.loc['H', c]) != 0:
+                    tab.loc['alpha', c - 1] * tab.loc['L', c] + tab.loc['H', c]) != 0:
                 val = tab.loc['H', c] * tab.loc['alpha', c - 1] / (
                     tab.loc['alpha', c - 1] * tab.loc['L', c] + tab.loc['H', c])
                 self.change_value('alpha', c, val, 18)
             if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['H', c], tab.loc['L', c]])) and (
-                        tab.loc['H', c] - tab.loc['alpha', c] * tab.loc['L', c]) != 0:
+                    tab.loc['H', c] - tab.loc['alpha', c] * tab.loc['L', c]) != 0:
                 val = tab.loc['H', c] * tab.loc['alpha', c] / (tab.loc['H', c] - tab.loc['alpha', c] * tab.loc['L', c])
                 self.change_value('alpha', c - 1, val, 18)
             if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['alpha', c], tab.loc['L', c]])) and (
-                        tab.loc['alpha', c - 1] - tab.loc['alpha', c]) != 0:
+                    tab.loc['alpha', c - 1] - tab.loc['alpha', c]) != 0:
                 val = tab.loc['alpha', c] * tab.loc['alpha', c - 1] * tab.loc['L', c] / (
                     tab.loc['alpha', c - 1] - tab.loc['alpha', c])
                 self.change_value('H', c, val, 18)
             if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['H', c], tab.loc['alpha', c]])) and (
-                        tab.loc['alpha', c - 1] * tab.loc['alpha', c]) != 0:
+                    tab.loc['alpha', c - 1] * tab.loc['alpha', c]) != 0:
                 val = tab.loc['H', c] * (tab.loc['alpha', c - 1] - tab.loc['alpha', c]) / (
                     tab.loc['alpha', c - 1] * tab.loc['alpha', c])
                 self.change_value('L', c, val, 18)
@@ -294,7 +336,7 @@ class MainTable:
                 val = tab.loc['H', c] * (tab.loc['V', c] - 1) / tab.loc['alpha', c - 1]
                 self.change_value('L', c, val, 19)
             if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['V', c], tab.loc['L', c]])) and (
-                        1 - tab.loc['V', c]) != 0:
+                    1 - tab.loc['V', c]) != 0:
                 val = tab.loc['alpha', c - 1] * tab.loc['L', c] / (tab.loc['V', c] - 1)
                 self.change_value('H', c, val, 19)
             if not np.any(np.isnan([tab.loc['H', c], tab.loc['alpha', c - 1], tab.loc['L', c]])) and \
@@ -349,7 +391,7 @@ class MainTable:
                 val = tab.loc['f', c] * (tab.loc['Beta', c] - tab.loc['Beta', c - 1])
                 self.change_value('Y', c, val, 22)
             if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['Y', c], tab.loc['Beta', c - 1]])) and (
-                        tab.loc['Beta', c] - tab.loc['Beta', c - 1]) != 0:
+                    tab.loc['Beta', c] - tab.loc['Beta', c - 1]) != 0:
                 val = tab.loc['Y', c] / (tab.loc['Beta', c] - tab.loc['Beta', c - 1])
                 self.change_value('f', c, val, 22)
 
@@ -358,7 +400,7 @@ class MainTable:
         c = column
         if 0 < c <= self.columns - 2:
             if not np.any(np.isnan([tab.loc['Q', c], tab.loc['Y', c], tab.loc['f', c]])) and (
-                        tab.loc['f', c] * (1 - tab.loc['Q', c])) != 0:
+                    tab.loc['f', c] * (1 - tab.loc['Q', c])) != 0:
                 val = tab.loc['Y', c] / (tab.loc['f', c] * (1 - tab.loc['Q', c]))
                 self.change_value('Beta', c, val, 23)
             if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['Y', c], tab.loc['f', c]])):
@@ -369,7 +411,7 @@ class MainTable:
                 val = tab.loc['f', c] * tab.loc['Beta', c] * (1 - tab.loc['Q', c])
                 self.change_value('Y', c, val, 23)
             if not np.any(np.isnan([tab.loc['Q', c], tab.loc['Y', c], tab.loc['Beta', c]])) and (
-                        tab.loc['Beta', c] * (1 - tab.loc['Q', c])) != 0:
+                    tab.loc['Beta', c] * (1 - tab.loc['Q', c])) != 0:
                 val = tab.loc['Y', c] / (tab.loc['Beta', c] * (1 - tab.loc['Q', c]))
                 self.change_value('f', c, val, 23)
 
@@ -388,22 +430,22 @@ class MainTable:
         c = column
         if 0 < c <= self.columns - 2:
             if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['T', c], tab.loc['Y', c]])) and (
-                        tab.loc['Y', c] - tab.loc['Beta', c] * tab.loc['T', c]) != 0:
+                    tab.loc['Y', c] - tab.loc['Beta', c] * tab.loc['T', c]) != 0:
                 val = tab.loc['Y', c] * tab.loc['Beta', c] / (
                     tab.loc['Y', c] - tab.loc['Beta', c] * tab.loc['T', c])
                 self.change_value('Beta', c - 1, val, 25)
             if not np.any(np.isnan([tab.loc['Beta', c - 1], tab.loc['T', c], tab.loc['Y', c]])) and (
-                            tab.loc['Beta', c - 1] * tab.loc['T', c] + tab.loc['Y', c]) != 0:
+                    tab.loc['Beta', c - 1] * tab.loc['T', c] + tab.loc['Y', c]) != 0:
                 val = tab.loc['Y', c] * tab.loc['Beta', c - 1] / (
                     tab.loc['Beta', c - 1] * tab.loc['T', c] + tab.loc['Y', c])
                 self.change_value('Beta', c, val, 25)
             if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['Y', c]])) and (
-                        tab.loc['Beta', c] * tab.loc['Beta', c - 1]) != 0:
+                    tab.loc['Beta', c] * tab.loc['Beta', c - 1]) != 0:
                 val = tab.loc['Y', c] * (tab.loc['Beta', c - 1] - tab.loc['Beta', c]) / (
                     tab.loc['Beta', c] * tab.loc['Beta', c - 1])
                 self.change_value('T', c, val, 25)
             if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['T', c], tab.loc['Beta', c - 1]])) and (
-                        tab.loc['Beta', c - 1] - tab.loc['Beta', c]) != 0:
+                    tab.loc['Beta', c - 1] - tab.loc['Beta', c]) != 0:
                 val = tab.loc['Beta', c] * tab.loc['Beta', c - 1] * tab.loc['T', c] / (
                     tab.loc['Beta', c - 1] - tab.loc['Beta', c])
                 self.change_value('Y', c, val, 25)
@@ -440,7 +482,7 @@ class MainTable:
                 self.change_value('Y', c, val, 27)
             if not np.any(np.isnan([tab.loc['Y', c], tab.loc['Y', c + 1], tab.loc['d', c]])) and tab.loc['d', c] != 0:
                 val = (tab.loc['Y', c] - tab.loc['Y', c + 1]) / tab.loc['d', c]
-                self.change_value('Beta', c, val)
+                self.change_value('Beta', c, val, 27)
             if not np.any(np.isnan([tab.loc['Y', c], tab.loc['Beta', c], tab.loc['Y', c + 1]])) and \
                     tab.loc['Beta', c] != 0:
                 val = (tab.loc['Y', c] - tab.loc['Y', c + 1]) / tab.loc['Beta', c]
@@ -457,7 +499,7 @@ class MainTable:
                 val = (tab.loc['alpha', c] * tab.loc['Y', c] - lhi) / tab.loc['Beta', c]
                 self.change_value('H', c, val, 36)
             if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['H', c], tab.loc['Beta', c], lhi])) and tab.loc[
-                        'alpha', c] != 0:
+                    'alpha', c] != 0:
                 val = (tab.loc['H', c] * tab.loc['Beta', c] + lhi) / tab.loc['alpha', c]
                 self.change_value('Y', c, val, 36)
             if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['Y', c], tab.loc['H', c], lhi])) and tab.loc[
@@ -653,9 +695,9 @@ class MainTable:
                     tab.loc['f', c] * tab.loc['Beta', c - 1])
                 self.change_value('alpha', c, val, 42)
             if not np.any(
-                    np.isnan(
-                        [tab.loc['alpha', c], tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['f', c], lhi])) and (
-                        tab.loc['f', c] * tab.loc['Beta', c]) != 0:
+                np.isnan(
+                    [tab.loc['alpha', c], tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['f', c], lhi])) and (
+                    tab.loc['f', c] * tab.loc['Beta', c]) != 0:
                 val = (tab.loc['alpha', c] * tab.loc['Beta', c - 1] * tab.loc['f', c] + lhi) / (
                     tab.loc['f', c] * tab.loc['Beta', c])
                 self.change_value('alpha', c - 1, val, 42)
@@ -723,49 +765,83 @@ class MainTable:
                 val = (tab.loc['H', c] * tab.loc['Y', c + 1] - tab.loc['H', c + 1] * tab.loc['Y', c]) / tab.loc['d', c]
                 self.change_lhi(val)
 
-    def align_yaxis(self,ax1, v1, ax2, v2):
-        _, y1 = ax1.transData.transform((0, v1))
-        _, y2 = ax2.transData.transform((0, v2))
-        self.adjust_yaxis(ax2,(y1-y2)/2,v2)
-        self.adjust_yaxis(ax1,(y2-y1)/2,v1)
+    def analyse44(self, i):
+        tab = self.table
+        elem = self.magnify[i]
+        c1 = elem['from']
+        c2 = elem['to']
+        if np.isnan(tab.loc['alpha', c1]):
+            val = tab.loc['alpha', c2] * elem['magn']
+            self.change_value('alpha', c1, val, 44)
+            del self.magnify[i]
+        elif np.isnan(tab.loc['alpha', c2]):
+            val = tab.loc['alpha', c1] / elem['magn']
+            self.change_value('alpha', c2, val, 44)
+            del self.magnify[i]
 
-    def adjust_yaxis(self, ax,ydif,v):
-        inv = ax.transData.inverted()
-        _, dy = inv.transform((0, 0)) - inv.transform((0, ydif))
-        miny, maxy = ax.get_ylim()
-        miny, maxy = miny - v, maxy - v
-        if -miny>maxy or (-miny==maxy and dy > 0):
-            nminy = miny
-            nmaxy = miny*(maxy+dy)/(miny+dy)
-        else:
-            nmaxy = maxy
-            nminy = maxy*(miny+dy)/(maxy+dy)
-        ax.set_ylim(nminy-.5+v, nmaxy+v)
+    def analyse45(self, i):
+        tab = self.table
+        elem = self.magnify[i]
+        c1 = elem['from']
+        c2 = elem['to']
+        if np.isnan(tab.loc['Beta', c1]):
+            val = tab.loc['Beta', c2] * elem['magn']
+            self.change_value('Beta', c1, val, 45)
+            del self.magnify[i]
+        elif np.isnan(tab.loc['Beta', c2]):
+            val = tab.loc['Beta', c1] / elem['magn']
+            self.change_value('Beta', c2, val, 45)
+            del self.magnify[i]
 
     def plot(self):
-        import matplotlib.pyplot as plt
-        y=list(self.table.loc['Y'])
-        h=list(self.table.loc['H'])
-        d=list(self.table.loc['d',0:self.columns-2])
-        ficz=list(self.table.loc['FIcz'])
+        plt.close('all')
+        y = list(self.table.loc['Y'])
+        h = list(self.table.loc['H'])
+        f = list(self.table.loc['f'])
+        d = list(self.table.loc['d', 0:self.columns - 2])
+        phi = list(self.table.loc['phi'])
+        phi = [el if not el == '' else np.nan for el in phi]
+        y_max = np.abs(y).max()
+        h_max = np.abs(h).max()
+        phi_max = np.nanmax(np.abs(phi))
+        ax_max = np.max([y_max, h_max, phi_max])
         d1 = [0]
         for i, val in enumerate(d):
-            d1.append(d1[i]+d[i])
-        #fig, ax1 = plt.subplots()
-        plt.plot(d1,h, label='h')
-        #ax2 = ax1.twinx()
-        plt.plot(d1,y, label='y', color='r')
+            d1.append(d1[i] + d[i])
+        plt.plot(d1, h, label='h')
+        plt.plot(d1, y, label='y', color='r')
         plt.legend()
-        #plt.axhline(y=0, xmin=d1[0],xmax=d1[-1], color = 'k')
-        for i, k in zip(d1[1:-1], ficz[1:-1]):
-            plt.plot([i,i], [-k/2, k/2], color='black')
-        #self.align_yaxis(ax2, 0, ax1, 0)
-        print (d1,h,y)
+        plt.axhline(y=0, xmin=d1[0], xmax=d1[-1], linestyle='-.', color='k')
+        fig = plt.gcf()
+        ax = plt.gca()
+        for i, k, f in zip(d1[1:-1], phi[1:-1], f[1:-1]):
+            fb = 1 / f
+            if np.isclose(fb, 0):
+                self.draw_stop(i, k, ax)
+            elif fb > 0:
+                self.draw_plus(i, k, ax)
+            else:
+                self.draw_minus(i, k, ax)
+        plt.ylim(-ax_max, ax_max)
+        plt.xlim(-1, d[-1] + 1)
+        ax.set_aspect('equal')
+        a = 2 * ax_max
+        b = d[-1] + 2
+        c, d = figaspect(a / b)
+        if np.max([c, d]) < 15:
+            c, d = 2 * c, 2 * d
+        fig.set_size_inches(c, d)
+        plt.tight_layout()
+        plt.savefig('test.png', dpi=300)
+        plt.show()
 
+    def draw_stop(self, x, y, ax):
+        ax.plot((x, x), (y, y + 10), marker='_', markevery=2, color='k', markersize=10)
+        ax.plot((x, x), (-y, -y - 10), marker='_', markevery=2, color='k', markersize=10)
 
+    def draw_minus(self, x, y, ax):
+        ax.plot((x, x), (y, 0), marker='1', markevery=2, color='k', markersize=10)
+        ax.plot((x, x), (-y, 0), marker='2', markevery=2, color='k', markersize=10)
 
-cols = input("Podaj liczbę elementów: ")
-table = MainTable(int(cols) + 1)
-change_value = table.change_value
-win = input("Podaj współczynnik winietowania: ")
-table.set_winieta(win)
+    def draw_plus(self, x, y, ax):
+        ax.annotate('', xy=(x, y), xytext=(x, -y), arrowprops=dict(arrowstyle="<->", shrinkA=0, shrinkB=0))
