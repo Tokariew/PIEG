@@ -1,0 +1,205 @@
+#:kivy 1.10
+#:set swidth dp(90)
+#:set sheight dp(40)
+#:set sfont sp(13)
+#:set dark (34/255, 34/255, 34/255, 1)
+#:set white (1, 1, 1, 1)
+#:set nan float('nan')
+#:import isnan math.isnan
+
+<EWidget@Widget>:
+    size_hint: (1, 1)
+    width: root.width
+    height: root.height
+
+<CLabel@Label>:
+    width: swidth
+    height: 3 * sheight // 4
+    font_size: sfont
+    size_hint: None, None
+    pos_hint: {'center_x': 0.5}
+    halign: 'center'
+    valign: 'middle'
+
+<CButton@Button>:
+    width: swidth
+    height: 3 * sheight // 4
+    font_size: sfont
+    size_hint: None, None
+    pos_hint: {'center_x': 0.5}
+
+<CSTextInput@TextInput>:
+    width: swidth
+    height: 3 * sheight // 4
+    font_size: sfont
+    size_hint: None, None
+    pos_hint: {'center_x': 0.5}
+    halign: 'center'
+    multiline: False
+
+<CTextInput@CSTextInput>:
+    data: nan
+    param: ''
+    text: '' if isnan(self.data) else '{:0.4f}'.format(self.data).rstrip('0').rstrip('.')
+    on_focus: app.main.help(self)
+    on_text_validate: app.main.validate_input(self)
+    disabled: False if isnan(self.data) else True
+
+<Col>:
+    orientation: 'vertical'
+    size_hint: None, None
+    width: self.minimum_width
+    height: self.minimum_height
+    col_number: 0
+    f: nan
+    d: nan
+    h: nan
+    alpha: nan
+    v: nan
+    l: nan
+    y1: nan
+    beta: nan
+    q: nan
+    t: nan
+    phi: nan
+    CLabel:
+        text: str(root.col_number)
+    CTextInput:
+        data: root.f
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else white
+        param: 'f'
+    CTextInput:
+        data: root.d
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) else white
+        param: 'd'
+    CTextInput:
+        data: root.h
+        param: 'h'
+    CTextInput:
+        data: root.alpha
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) else white
+        param: 'alpha'
+    CTextInput:
+        data: root.v
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else white
+        param: 'v'
+    CTextInput:
+        data: root.l
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else white
+        param: 'l'
+    CTextInput:
+        data: root.y1
+        param: 'y1'
+    CTextInput:
+        data: root.beta
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) else white
+        param: 'beta'
+    CTextInput:
+        data: root.q
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else white
+        param: 'q'
+    CTextInput:
+        data: root.t
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else white
+        param: 't'
+    CLabel:
+        #data: root.phi
+        text: '' if isnan(root.phi) else '{:0.2f}'.format(root.phi)
+        param: 'phi'
+
+<RV>:
+    id: table
+    viewclass: 'Col'
+    scroll_type: ['bars', 'content']
+    scroll_wheel_distance: '114dp'
+    bar_height: '30dp'
+    SelectableRecycleBoxLayout:
+        default_size: None, None
+        default_size_hint: None, None
+        size_hint: None, None
+        width: self.minimum_width
+        height: self.minimum_height
+        orientation: 'horizontal'
+
+<NosWidget>:
+    BoxLayout:
+        orientation: 'vertical'
+        BoxLayout:
+            orientation: 'horizontal'
+            height: self.minimum_height
+            size_hint_y: None
+            CLabel:
+                text: 'Number of\nelements:'
+            CSTextInput:
+                input_filter: 'int'
+                on_focus: app.nos.help(self)
+                on_text_validate: app.nos.validate_input(self)
+        EWidget
+
+<MainWidget>:
+    BoxLayout:
+        orientation: 'vertical'
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: None
+            height: self.minimum_height
+            CButton:
+                text: 'New'
+                on_release: app.sm.current = 'nos'
+                on_release: lhi_label.data = nan
+                on_release: vignette_input.data = nan
+            CButton:
+                text: 'Plot'
+                on_release: app.main.plot()
+        BoxLayout:
+            orientation: 'horizontal'
+            pos_hint: {'center_x': 0.5}
+            size_hint_y: None
+            height: self.minimum_height
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint: None, None
+                width: self.minimum_width
+                height: self.minimum_height
+                CLabel:
+                    text: 'number'
+                CLabel:
+                    text: 'f'
+                CLabel:
+                    text: 'd'
+                CLabel:
+                    text: 'H'
+                CLabel:
+                    text: '\u03B1'
+                CLabel:
+                    text: 'V'
+                CLabel:
+                    text: 'L'
+                CLabel:
+                    text: 'Y'
+                CLabel:
+                    text: '\u03B2'
+                CLabel:
+                    text: 'Q'
+                CLabel:
+                    text: 'T'
+                CLabel:
+                    text: '\u03A6 \u2090'
+                EWidget
+            RV:
+                id: table
+        BoxLayout:
+            orientation: 'horizontal'
+            height: sheight
+            size_hint_y: None
+            CLabel:
+                id: lhi_label
+                data: nan
+                text: 'LHI: {:0.2f}'.format(float(self.data)) if not isnan(float(self.data)) else 'LHI:'
+            CLabel:
+                text: 'vignette'
+            CTextInput:
+                id: vignette_input
+                param: 'vignette'
+                data: nan
+        EWidget
