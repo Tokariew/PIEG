@@ -149,8 +149,17 @@
                 on_release: lhi_label.data = nan
                 on_release: vignette_input.data = nan
             CButton:
+                text: 'Magnify'
+                disabled: True
+            CButton:
+                text: 'Iteration'
+                disabled: True
+            CButton:
                 text: 'Plot'
                 on_release: app.main.plot()
+            CButton:
+                text: 'Export'
+                on_release: app.main.export()
         BoxLayout:
             orientation: 'horizontal'
             pos_hint: {'center_x': 0.5}
@@ -203,3 +212,9 @@
                 param: 'vignette'
                 data: nan
         EWidget
+        BoxLayout:
+            size_hint_y: None
+            height: sheight
+            CLabel:
+                text: 'Info Label'
+                id: info_label

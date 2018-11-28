@@ -794,6 +794,7 @@ class MainTable:
             del self.magnify[i]
 
     def plot(self):
+        plt.ioff()
         plt.close('all')
         y = list(self.table.loc['Y'])
         h = list(self.table.loc['H'])
@@ -833,6 +834,7 @@ class MainTable:
         fig.set_size_inches(c, d)
         plt.tight_layout()
         plt.savefig('test.png', dpi=300)
+        plt.ion()
         plt.show()
 
     def draw_stop(self, x, y, ax):

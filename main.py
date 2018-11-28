@@ -101,7 +101,7 @@ class MainWidget(Screen):
 
     def key_action(self, key, keycode, text, modif):
         if keycode[1] == 'z' and modif[0] == 'ctrl':
-            print('undo_changes')
+            self.update_label('Undo')
             self.table2.undo_changes()
             self.update_table()
 
@@ -113,7 +113,13 @@ class MainWidget(Screen):
         try:
             self.table2.plot()
         except ValueError:
-            print('Brak wszystkich danych')
+            self.update_label('Not enough data')
+
+    def export(self):
+        self.table2.table.to_csv('out.csv')
+
+    def update_label(self, msg):
+        self.ids.info_label.text = msg
 
     def __init__(self, **kwargs):
         super(MainWidget, self).__init__(**kwargs)
