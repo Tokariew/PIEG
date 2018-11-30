@@ -21,31 +21,33 @@ class MainTable:
         tab = self.table
         tab.loc['f', 0] = ''
         tab.loc['V':'L', 0] = ''
-        tab.loc['Q':'phi', 0] = ''
+        tab.loc['Q':'T', 0] = ''
         tab.loc['f':'d', self.columns - 1] = ''
         tab.loc['alpha':'L', self.columns - 1] = ''
-        tab.loc['Beta':'phi', self.columns - 1] = ''
+        tab.loc['Beta':'T', self.columns - 1] = ''
         self.magnify = []
         self.LHI = np.nan
         self.vignette = np.nan
         self.prev_tables = []
+        self.history_input = []
+        self.history = []
 
     def change_value(self, row, column, value, func=0):
         tab = self.table
         if np.isnan(value):
-            print('A ty co robisz, czemu mi sie buntuje', row, column)
-            value = 0
+            return
         if func == 0:
             self.prev_tables.append(tab.copy(True))
-            print('appending with:', row, column)
+            self.history_input.append('{}{} set as {}'.format(row, column, value))
         if row in MainTable.ind:
             if np.isnan(tab.loc[row, column]):
                 tab.at[row, column] = value
-                print('{}{} is now {} from {}'.format(row, column, value, func))
+                self.history.append('{}{} is now {} from {}'.format(row, column, value, func))
                 self.analise_input(row, column)
 
     def undo_changes(self):
         self.table = self.prev_tables.pop()
+        self.history_input.pop()
         self.vignette = self.table.loc['vignette', 0]
         self.LHI = self.table.loc['lhi', 0]
 
@@ -69,7 +71,7 @@ class MainTable:
         if np.isnan(self.LHI):
             self.LHI = value
             self.table.loc['lhi', 0] = self.LHI
-            print('LHI is now {} from {}'.format(value, func))
+            self.history.append('LHI set as {} from {}'.format(value, func))
             self.check_lhi_function()
 
     def set_vignetting(self, value):
@@ -79,7 +81,7 @@ class MainTable:
             for i in range(self.columns):
                 self.table.loc['vignette', i] = self.vignette
                 self.analyse1(i)
-            print('Współczynnik winietowania is now {}'.format(value))
+            self.history_input.append('vignette set as {}'.format(value))
 
     def analise_input(self, row, column):
         if row == MainTable.ind[0]:
@@ -106,10 +108,10 @@ class MainTable:
             for i, elem in enumerate(self.magnify):
                 from_col, to_col = elem['from'], elem['to']
                 if elem['type'] == 'V':
-                    if not np.all([np.isnan(self.table.loc['alpha', from_col]), np.isnan(self.table.loc['alpha', to_col])]):
+                    if not np.all(np.isnan(self.table.loc['alpha', from_col], self.table.loc['alpha', to_col])):
                         self.analyse44(i)
                 elif elem['type'] == 'Q':
-                    if not np.all([np.isnan(self.table.loc['Beta', from_col]), np.isnan(self.table.loc['Beta', to_col])]):
+                    if not np.all(np.isnan(self.table.loc['Beta', from_col], self.table.loc['Beta', to_col])):
                         self.analyse45(i)
 
         self.check_lhi_function()
@@ -156,6 +158,7 @@ class MainTable:
         self.analyse20(column)
         self.analyse36(column)
         self.analyse37(column + 1)
+        self.analyse38(column)
         self.analyse40(column)
         self.analyse42(column + 1)
 
@@ -164,6 +167,7 @@ class MainTable:
         self.analyse16(column)
         self.analyse17(column)
         self.analyse19(column)
+        self.analyse38(column)
         self.analyse39(column)
         self.analyse40(column)
         self.analyse41(column)
@@ -183,6 +187,7 @@ class MainTable:
         self.analyse27(column - 1)
         self.analyse36(column)
         self.analyse37(column)
+        self.analyse38(column)
         self.analyse40(column + 1)
         self.analyse43(column)
         self.analyse43(column - 1)
@@ -208,6 +213,8 @@ class MainTable:
     def check_q_function(self, column):
         self.analyse21(column)
         self.analyse24(column)
+        self.analyse38(column)
+        self.analyse39(column)
 
     def check_t_function(self, column):
         # deleted two function, they didn't have a T term, so it will be run from some other place.
@@ -220,6 +227,7 @@ class MainTable:
             for i in range(0, self.columns):
                 self.analyse36(i)
                 self.analyse37(i)
+                self.analyse38(i)
                 self.analyse39(i)
                 self.analyse40(i)
                 self.analyse41(i)
@@ -230,540 +238,546 @@ class MainTable:
         tab = self.table
         c = column
         if 1 <= c <= self.columns - 2:
-            if not np.any(np.isnan([self.vignette, tab.loc['H', c], tab.loc['Y', c]])):
-                a = 2 * np.abs(tab.loc['H', c])
-                b = 2 * (np.abs(tab.loc['Y', c]) + self.vignette * np.abs(tab.loc['H', c]))
-                val = np.max([a, b])
-                self.change_value('phi', c, val, 1)
+            temp = dict(vignette=self.vignette, H=tab.loc['H', c], Y=tab.loc['Y', c], phi=tab.loc['phi', c])
+            ans = self.check_if_nan(**temp)
+            if ans != 'phi':
+                return
+            a = 2 * np.abs(tab.loc['H', c])
+            b = 2 * (np.abs(tab.loc['Y', c]) + self.vignette * np.abs(tab.loc['H', c]))
+            val = np.max([a, b])
+            self.change_value('phi', c, val, 1)
 
     def analyse14(self, column):
         tab = self.table
         c = column
+        V, alpha, alpha_1 = tab.loc['V', c], tab.loc['alpha', c], tab.loc['alpha', c]
         if 1 <= c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['V', c], tab.loc['alpha', c]])):
-                val = tab.loc['V', c] * tab.loc['alpha', c]
+            temp = dict(V=V, alpha=alpha, alpha_1=alpha_1)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'alpha_1':
+                val = V * alpha
                 self.change_value('alpha', c - 1, val, 14)
-            if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['V', c]])) and tab.loc['V', c] != 0:
-                val = tab.loc['alpha', c - 1] / tab.loc['V', c]
+            if ans == 'alpha' and not np.isclose(V, 0):
+                val = alpha_1 / V
                 self.change_value('alpha', c, val, 14)
-            if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['alpha', c]])) and tab.loc['alpha', c] != 0:
-                val = tab.loc['alpha', c - 1] / tab.loc['alpha', c]
+            if ans == 'V' and not np.isclose(alpha, 0):
+                val = alpha_1 / alpha
                 self.change_value('V', c, val, 14)
 
     def analyse15(self, column):
         tab = self.table
         c = column
-        if 1 <= c <= column - 2:
-            if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['H', c], tab.loc['f', c]])) and \
-                    tab.loc['f', c] != 0:
-                val = tab.loc['alpha', c - 1] + tab.loc['H', c] / tab.loc['f', c]
+        if 1 <= c <= self.columns - 2:
+            H, f, alpha, alpha_1 = tab.loc['H', c], tab.loc['f', c], tab.loc['alpha', c], tab.loc['alpha', c - 1]
+            temp = dict(alpha=alpha, alpha_1=alpha_1, H=H, f=f)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'alpha' and not np.isclose(f, 0):
+                val = alpha_1 + H / f
                 self.change_value('alpha', c, val, 15)
-            if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['H', c], tab.loc['f', c]])) and tab.loc['f', c] != 0:
-                val = tab.loc['alpha', c] - tab.loc['H', c] / tab.loc['f', c]
+            if ans == 'alpha_1' and not np.isclose(f, 0):
+                val = alpha - H / f
                 self.change_value('alpha', c - 1, val, 15)
-            if not np.any(np.isnan([tab.loc['f', c], tab.loc['alpha', c], tab.loc['alpha', c - 1]])):
-                val = tab.loc['f', c] * (tab.loc['alpha', c] - tab.loc['alpha', c - 1])
+            if ans == 'H':
+                val = f * (alpha - alpha_1)
                 self.change_value('H', c, val, 15)
-            if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['alpha', c - 1], tab.loc['H', c]])) and (
-                    tab.loc['alpha', c] - tab.loc['alpha', c - 1]) != 0:
-                val = tab.loc['H', c] / (tab.loc['alpha', c] - tab.loc['alpha', c - 1])
+            if ans == 'f' and not np.isclose(alpha - alpha_1, 0):
+                val = H / (alpha - alpha_1)
                 self.change_value('f', c, val, 15)
 
     def analyse16(self, column):
         tab = self.table
         c = column
+        H, f, V, alpha = tab.loc['H', c], tab.loc['f', c], tab.loc['V', c], tab.loc['alpha', c]
         if 1 <= c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['V', c], tab.loc['H', c], tab.loc['f', c]])) and (
-                    tab.loc['f', c] * (1 - tab.loc['V', c])) != 0:
-                val = - tab.loc['H', c] / (tab.loc['f', c] * (tab.loc['V', c] - 1))
+            temp = dict(alpha=alpha, V=V, H=H, f=f)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'alpha' and not np.isclose(f * (V - 1), 0):
+                val = - H / (f * (V - 1))
                 self.change_value('alpha', c, val, 16)
-            if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['H', c], tab.loc['f', c]])) and (
-                    tab.loc['alpha', c] * tab.loc['f', c]) != 0:
-                val = 1 - tab.loc['H', c] / (tab.loc['f', c] * tab.loc['alpha', c])
+            if ans == 'V' and not np.isclose(alpha * f, 0):
+                val = 1 - H / (alpha * f)
                 self.change_value('V', c, val, 16)
-            if not np.any(np.isnan([tab.loc['V', c], tab.loc['alpha', c], tab.loc['f', c]])):
-                val = tab.loc['alpha', c] * tab.loc['f', c] * (1 - tab.loc['V', c])
+            if ans == 'H':
+                val = alpha * f * (1 - V)
                 self.change_value('H', c, val, 16)
-            if not np.any(np.isnan([tab.loc['V', c], tab.loc['H', c], tab.loc['alpha', c]])) and (
-                    tab.loc['alpha', c] * (1 - tab.loc['V', c])) != 0:
-                val = tab.loc['H', c] / (tab.loc['alpha', c] * (1 - tab.loc['V', c]))
+            if ans == 'f' and not np.isclose(alpha * (V - 1), 0):
+                val = H / (alpha * (1 - V))
                 self.change_value('f', c, val, 16)
 
     def analyse17(self, column):
         tab = self.table
         c = column
+        L, f, V, = tab.loc['L', c], tab.loc['f', c], tab.loc['V', c]
         if 1 <= c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['V', c], tab.loc['f', c]])) and tab.loc['V', c] != 0:
-                val = - (tab.loc['f', c] * (1 - tab.loc['V', c]) ** 2) / tab.loc['V', c]
+            temp = dict(f=f, V=V, L=L)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'L' and not np.isclose(V, 0):
+                val = - (f * (1 - V) ** 2) / V
                 self.change_value('L', c, val, 17)
-            if not np.any(np.isnan([tab.loc['L', c], tab.loc['f', c]])) and (1 - tab.loc['V', c]) != 0:
-                val = (-tab.loc['V', c] * tab.loc['L', c]) / (1 - tab.loc['V', c]) ** 2
+            if ans == 'f' and not np.isclose(V - 1, 0):
+                val = - L * V / (1 - V) ** 2
                 self.change_value('f', c, val, 17)
 
     def analyse18(self, column):
         tab = self.table
         c = column
         if 1 <= c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['H', c], tab.loc['L', c]])) and (
-                    tab.loc['alpha', c - 1] * tab.loc['L', c] + tab.loc['H', c]) != 0:
-                val = tab.loc['H', c] * tab.loc['alpha', c - 1] / (
-                    tab.loc['alpha', c - 1] * tab.loc['L', c] + tab.loc['H', c])
+            alpha, alpha_1, L, H = tab.loc['alpha', c], tab.loc['alpha', c - 1], tab.loc['L', c], tab.loc['H', c]
+            temp = dict(alpha=alpha, alpha_1=alpha_1, L=L, H=H)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'alpha' and not np.isclose(H + L * alpha_1, 0):
+                val = H * alpha_1 / (H + L * alpha_1)
                 self.change_value('alpha', c, val, 18)
-            if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['H', c], tab.loc['L', c]])) and (
-                    tab.loc['H', c] - tab.loc['alpha', c] * tab.loc['L', c]) != 0:
-                val = tab.loc['H', c] * tab.loc['alpha', c] / (tab.loc['H', c] - tab.loc['alpha', c] * tab.loc['L', c])
+            if ans == 'alpha_1' and not np.isclose(H - L * alpha, 0):
+                val = H * alpha / (H - L * alpha)
                 self.change_value('alpha', c - 1, val, 18)
-            if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['alpha', c], tab.loc['L', c]])) and (
-                    tab.loc['alpha', c - 1] - tab.loc['alpha', c]) != 0:
-                val = tab.loc['alpha', c] * tab.loc['alpha', c - 1] * tab.loc['L', c] / (
-                    tab.loc['alpha', c - 1] - tab.loc['alpha', c])
+            if ans == 'H' and not np.isclose(alpha - alpha_1, 0):
+                val = L * alpha * alpha_1 / (alpha_1 - alpha)
                 self.change_value('H', c, val, 18)
-            if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['H', c], tab.loc['alpha', c]])) and (
-                    tab.loc['alpha', c - 1] * tab.loc['alpha', c]) != 0:
-                val = tab.loc['H', c] * (tab.loc['alpha', c - 1] - tab.loc['alpha', c]) / (
-                    tab.loc['alpha', c - 1] * tab.loc['alpha', c])
+            if ans == 'L' and not np.isclose(alpha * alpha_1, 0):
+                val = H * (alpha_1 - alpha) / (alpha * alpha_1)
                 self.change_value('L', c, val, 18)
 
     def analyse19(self, column):
         tab = self.table
         c = column
         if 1 <= c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['H', c], tab.loc['V', c], tab.loc['L', c]])) and tab.loc['L', c] != 0:
-                val = tab.loc['H', c] * (tab.loc['V', c] - 1) / tab.loc['L', c]
+            H, V, L, alpha_1 = tab.loc['H', c], tab.loc['V', c], tab.loc['L', c], tab.loc['alpha', c - 1]
+            temp = dict(alpha_1=alpha_1, H=H, L=L, V=V)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'alpha_1' and not np.isclose(L, 0):
+                val = H * (V - 1) / L
                 self.change_value('alpha', c - 1, val, 19)
-            if not np.any(np.isnan([tab.loc['H', c], tab.loc['V', c], tab.loc['alpha', c - 1]])) and \
-                    tab.loc['alpha', c - 1] != 0:
-                val = tab.loc['H', c] * (tab.loc['V', c] - 1) / tab.loc['alpha', c - 1]
+            if ans == 'L' and not np.isclose(alpha_1, 0):
+                val = H * (V - 1) / alpha_1
                 self.change_value('L', c, val, 19)
-            if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['V', c], tab.loc['L', c]])) and (
-                    1 - tab.loc['V', c]) != 0:
-                val = tab.loc['alpha', c - 1] * tab.loc['L', c] / (tab.loc['V', c] - 1)
+            if ans == 'H' and not np.isclose(V - 1, 0):
+                val = L * alpha_1 / (V - 1)
                 self.change_value('H', c, val, 19)
-            if not np.any(np.isnan([tab.loc['H', c], tab.loc['alpha', c - 1], tab.loc['L', c]])) and \
-                    tab.loc['H', c] != 0:
-                val = (tab.loc['alpha', c - 1] * tab.loc['L', c] + tab.loc['H', c]) / tab.loc['H', c]
+            if ans == 'V' and not np.isclose(H, 0):
+                val = (H + L * alpha_1) / H
                 self.change_value('V', c, val, 19)
 
     def analyse20(self, column):
         tab = self.table
         c = column
         if self.columns - 2 >= c >= 0:
-            if not np.any(np.isnan([tab.loc['H', c + 1], tab.loc['alpha', c], tab.loc['d', c]])):
-                val = tab.loc['H', c + 1] + tab.loc['alpha', c] * tab.loc['d', c]
+            H1, H, alpha, d = tab.loc['H', c + 1], tab.loc['H', c], tab.loc['alpha', c], tab.loc['d', c]
+            temp = dict(H1=H1, H=H, alpha=alpha, d=d)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'H':
+                val = H1 + alpha * d
                 self.change_value('H', c, val, 20)
-            if not np.any(np.isnan([tab.loc['H', c], tab.loc['alpha', c], tab.loc['d', c]])):
-                val = tab.loc['H', c] - tab.loc['alpha', c] * tab.loc['d', c]
+            if ans == 'H1':
+                val = H - alpha * d
                 self.change_value('H', c + 1, val, 20)
-            if not np.any(np.isnan([tab.loc['H', c + 1], tab.loc['H', c], tab.loc['d', c]])) and tab.loc['d', c] != 0:
-                val = (tab.loc['H', c] - tab.loc['H', c + 1]) / tab.loc['d', c]
+            if ans == 'alpha' and not np.isclose(tab.loc['d', c], 0):
+                val = (H - H1) / d
                 self.change_value('alpha', c, val, 20)
-            if not np.any(np.isnan([tab.loc['H', c + 1], tab.loc['alpha', c], tab.loc['H', c]])) and \
-                    tab.loc['alpha', c] != 0:
-                val = (tab.loc['H', c] - tab.loc['H', c + 1]) / tab.loc['alpha', c]
+            if ans == 'd' and not np.isclose(alpha, 0):
+                val = (H - H1) / alpha
                 self.change_value('d', c, val, 20)
 
     def analyse21(self, column):
         tab = self.table
         c = column
         if 0 < c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['Q', c]])):
-                val = tab.loc['Beta', c] * tab.loc['Q', c]
+            Beta, Beta_1, Q = tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['Q', c]
+            temp = dict(Beta=Beta, Beta_1=Beta_1, Q=Q)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'Beta_1':
+                val = Beta * Q
                 self.change_value('Beta', c - 1, val, 21)
-            if not np.any(np.isnan([tab.loc['Beta', c - 1], tab.loc['Q', c]])) and tab.loc['Q', c] != 0:
-                val = tab.loc['Beta', c - 1] / tab.loc['Q', c]
+            if ans == 'Beta' and not np.isclose(Q, 0):
+                val = Beta_1 / Q
                 self.change_value('Beta', c, val, 21)
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['Beta', c - 1]])) and tab.loc['Beta', c] != 0:
-                val = tab.loc['Beta', c - 1] / tab.loc['Beta', c]
+            if ans == 'Q' and not np.isclose(Beta, 0):
+                val = Beta_1 / Beta
                 self.change_value('Q', c, val, 21)
 
     def analyse22(self, column):
         tab = self.table
         c = column
         if 1 <= c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['Y', c], tab.loc['f', c]])) and tab.loc['f', c] != 0:
-                val = tab.loc['Beta', c] - tab.loc['Y', c] / tab.loc['f', c]
+            Beta, Beta_1, Y, f = tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['Y', c], tab.loc['f', c]
+            temp = dict(Beta=Beta, Beta_1=Beta_1, Y=Y, f=f)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'Beta_1' and not np.isclose(f, 0):
+                val = Beta - Y / f
                 self.change_value('Beta', c - 1, val, 22)
-            if not np.any(np.isnan([tab.loc['Beta', c - 1], tab.loc['Y', c], tab.loc['f', c]])) and \
-                    tab.loc['f', c] != 0:
-                val = tab.loc['Beta', c - 1] + tab.loc['Y', c] / tab.loc['f', c]
+            if ans == 'Beta' and not np.isclose(f, 0):
+                val = Beta_1 + Y / f
                 self.change_value('Beta', c, val, 22)
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['Y', c], tab.loc['f', c]])):
-                val = tab.loc['f', c] * (tab.loc['Beta', c] - tab.loc['Beta', c - 1])
+            if ans == 'Y':
+                val = f * (Beta - Beta_1)
                 self.change_value('Y', c, val, 22)
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['Y', c], tab.loc['Beta', c - 1]])) and (
-                    tab.loc['Beta', c] - tab.loc['Beta', c - 1]) != 0:
-                val = tab.loc['Y', c] / (tab.loc['Beta', c] - tab.loc['Beta', c - 1])
+            if ans == 'f' and not np.isclose(Beta - Beta_1, 0):
+                val = Y / (Beta - Beta_1)
                 self.change_value('f', c, val, 22)
 
     def analyse23(self, column):
         tab = self.table
         c = column
+        Beta, Q, Y, f = tab.loc['Beta', c], tab.loc['Q', c], tab.loc['Y', c], tab.loc['f', c]
         if 0 < c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['Q', c], tab.loc['Y', c], tab.loc['f', c]])) and (
-                    tab.loc['f', c] * (1 - tab.loc['Q', c])) != 0:
-                val = tab.loc['Y', c] / (tab.loc['f', c] * (1 - tab.loc['Q', c]))
+            temp = dict(Beta=Beta, Q=Q, Y=Y, f=f)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'Beta' and not np.isclose(f * (1 - Q), 0):
+                val = Y / (f * (1 - Q))
                 self.change_value('Beta', c, val, 23)
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['Y', c], tab.loc['f', c]])):
-                if (tab.loc['Beta', c] * tab.loc['f', c]) != 0:
-                    val = 1 - (tab.loc['Y', c]) / (tab.loc['f', c] * tab.loc['Beta', c])
-                    self.change_value('Q', c, val, 23)
-            if not np.any(np.isnan([tab.loc['Q', c], tab.loc['Beta', c], tab.loc['f', c]])):
-                val = tab.loc['f', c] * tab.loc['Beta', c] * (1 - tab.loc['Q', c])
+            if ans == 'Q' and not np.isclose(Beta * f, 0):
+                val = 1 - Y / (Beta * f)
+                self.change_value('Q', c, val, 23)
+            if ans == 'Y':
+                val = Beta * f * (1 - Q)
                 self.change_value('Y', c, val, 23)
-            if not np.any(np.isnan([tab.loc['Q', c], tab.loc['Y', c], tab.loc['Beta', c]])) and (
-                    tab.loc['Beta', c] * (1 - tab.loc['Q', c])) != 0:
-                val = tab.loc['Y', c] / (tab.loc['Beta', c] * (1 - tab.loc['Q', c]))
+            if ans == 'f' and not np.isclose(Beta * (1 - Q), 0):
+                val = Y / (Beta * (1 - Q))
                 self.change_value('f', c, val, 23)
 
     def analyse24(self, column):
         tab = self.table
         c = column
-        if not np.any(np.isnan([tab.loc['f', c], tab.loc['Q', c]])) and tab.loc['Q', c] != 0:
-            val = (-tab.loc['f', c] * (1 - tab.loc['Q', c]) ** 2) / tab.loc['Q', c]
-            self.change_value('T', c, val, 24)
-        if not np.any(np.isnan([tab.loc['T', c], tab.loc['Q', c]])) and (1 - tab.loc['Q', c]) != 0:
-            val = -tab.loc['Q', c] * tab.loc['T', c] / (1 - tab.loc['Q', c]) ** 2
-            self.change_value('f', c, val, 24)
+        f, Q, T = tab.loc['f', c], tab.loc['Q', c], tab.loc['T', c]
+        if 0 < c <= self.columns - 2:
+            temp = dict(f=f, Q=Q, T=T)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'T' and not np.isclose(Q, 0):
+                val = - (f * (1 - Q) ** 2) / Q
+                self.change_value('T', c, val, 24)
+            if ans == 'f' and not np.isclose(1 - Q, 0):
+                val = - Q * T / (1 - Q) ** 2
+                self.change_value('f', c, val, 24)
 
     def analyse25(self, column):
         tab = self.table
         c = column
         if 0 < c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['T', c], tab.loc['Y', c]])) and (
-                    tab.loc['Y', c] - tab.loc['Beta', c] * tab.loc['T', c]) != 0:
-                val = tab.loc['Y', c] * tab.loc['Beta', c] / (
-                    tab.loc['Y', c] - tab.loc['Beta', c] * tab.loc['T', c])
+            Beta, Beta_1, T, Y = tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['T', c], tab.loc['Y', c]
+            temp = dict(Beta=Beta, Beta_1=Beta_1, T=T, Y=Y)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'Beta_1' and not np.isclose(Y - Beta * T, 0):
+                val = Beta * Y / (Y - Beta * T)
                 self.change_value('Beta', c - 1, val, 25)
-            if not np.any(np.isnan([tab.loc['Beta', c - 1], tab.loc['T', c], tab.loc['Y', c]])) and (
-                    tab.loc['Beta', c - 1] * tab.loc['T', c] + tab.loc['Y', c]) != 0:
-                val = tab.loc['Y', c] * tab.loc['Beta', c - 1] / (
-                    tab.loc['Beta', c - 1] * tab.loc['T', c] + tab.loc['Y', c])
+            if ans == 'Beta' and not np.isnan(Beta_1 * T + Y, 0):
+                val = Y * Beta_1 / (Y + Beta_1 * T)
                 self.change_value('Beta', c, val, 25)
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['Y', c]])) and (
-                    tab.loc['Beta', c] * tab.loc['Beta', c - 1]) != 0:
-                val = tab.loc['Y', c] * (tab.loc['Beta', c - 1] - tab.loc['Beta', c]) / (
-                    tab.loc['Beta', c] * tab.loc['Beta', c - 1])
+            if ans == 'T' and not np.isclose(Beta * Beta_1, 0):
+                val = Y * (Beta_1 - Beta) / (Beta * Beta_1)
                 self.change_value('T', c, val, 25)
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['T', c], tab.loc['Beta', c - 1]])) and (
-                    tab.loc['Beta', c - 1] - tab.loc['Beta', c]) != 0:
-                val = tab.loc['Beta', c] * tab.loc['Beta', c - 1] * tab.loc['T', c] / (
-                    tab.loc['Beta', c - 1] - tab.loc['Beta', c])
+            if ans == 'Y' and not np.isclose(Beta_1 - Beta, 0):
+                val = Beta * Beta_1 * T / (Beta_1 - Beta)
                 self.change_value('Y', c, val, 25)
 
     def analyse26(self, column):
         tab = self.table
         c = column
         if 0 < c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['T', c], tab.loc['Q', c]])) and tab.loc['T', c] != 0:
-                val = tab.loc['Y', c] * (tab.loc['Q', c] - 1) / tab.loc['T', c]
+            Beta_1, T, Y, Q = tab.loc['Beta', c - 1], tab.loc['T', c], tab.loc['Y', c], tab.loc['Q', c]
+            temp = dict(Beta_1=Beta_1, T=T, Q=Q, Y=Y)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'Beta_1' and not np.isclose(T, 0):
+                val = Y * (Q - 1) / T
                 self.change_value('Beta', c - 1, val, 26)
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['T', c], tab.loc['Q', c]])) and \
-                    tab.loc['Beta', c - 1] != 0:
-                val = tab.loc['Y', c] * (tab.loc['Q', c] - 1) / tab.loc['Beta', c - 1]
+            if ans == 'T' and not np.isclose(Beta_1, 0):
+                val = Y * (Q - 1) / Beta_1
                 self.change_value('T', c, val, 26)
-            if not np.any(np.isnan([tab.loc['Beta', c - 1], tab.loc['T', c], tab.loc['Q', c]])) and \
-                    (1 - tab.loc['Q', c]) != 0:
-                val = tab.loc['Beta', c - 1] * tab.loc['T', c] / (tab.loc['Q', c] - 1)
+            if ans == 'Y' and not np.isclose(Q - 1, 0):
+                val = Beta_1 * T / (Q - 1)
                 self.change_value('Y', c, val, 26)
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['T', c], tab.loc['Beta', c - 1]])) and \
-                    tab.loc['Y', c] != 0:
-                val = 1 + tab.loc['Beta', c - 1] * tab.loc['T', c] / tab.loc['Y', c]
+            if ans == 'Q' and not np.isclose(Y, 0):
+                val = 1 + Beta_1 * T / Y
                 self.change_value('Q', c, val, 26)
 
     def analyse27(self, column):
         tab = self.table
         c = column
         if self.columns - 2 >= c >= 0:
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['Beta', c], tab.loc['d', c]])):
-                val = tab.loc['Y', c] - tab.loc['Beta', c] * tab.loc['d', c]
+            Beta, Y, Y1, d = tab.loc['Beta', c], tab.loc['Y', c], tab.loc['Y', c + 1], tab.loc['d', c]
+            temp = dict(Beta=Beta, Y=Y, Y1=Y1, d=d)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'Y1':
+                val = Y - Beta * d
                 self.change_value('Y', c + 1, val, 27)
-            if not np.any(np.isnan([tab.loc['Y', c + 1], tab.loc['Beta', c], tab.loc['d', c]])):
-                val = tab.loc['Y', c + 1] + tab.loc['Beta', c] * tab.loc['d', c]
+            if ans == 'Y':
+                val = Y1 + Beta * d
                 self.change_value('Y', c, val, 27)
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['Y', c + 1], tab.loc['d', c]])) and tab.loc['d', c] != 0:
-                val = (tab.loc['Y', c] - tab.loc['Y', c + 1]) / tab.loc['d', c]
+            if ans == 'Beta' and not np.isclose(d, 0):
+                val = (Y - Y1) / d
                 self.change_value('Beta', c, val, 27)
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['Beta', c], tab.loc['Y', c + 1]])) and \
-                    tab.loc['Beta', c] != 0:
-                val = (tab.loc['Y', c] - tab.loc['Y', c + 1]) / tab.loc['Beta', c]
+            if ans == 'd' and not np.isclose(Beta, 0):
+                val = (Y - Y1) / Beta
                 self.change_value('d', c, val, 27)
 
     def analyse36(self, column):
         tab = self.table
         c = column
-        lhi = self.LHI
+        lhi, Beta, H, Y, alpha = self.LHI, tab.loc['Beta', c], tab.loc['H', c], tab.loc['Y', c], tab.loc['alpha', c]
         if self.columns - 2 > c:
+            temp = dict(Beta=Beta, Y=Y, alpha=alpha, H=H, lhi=lhi)
+            ans = self.check_if_nan(**temp)
             # normals
-            if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['Y', c], tab.loc['Beta', c], lhi])) and tab.loc[
-                    'Beta', c] != 0:
-                val = (tab.loc['alpha', c] * tab.loc['Y', c] - lhi) / tab.loc['Beta', c]
+            if ans == 'H' and not np.isclose(Beta, 0):
+                val = (Y * alpha - lhi) / Beta
                 self.change_value('H', c, val, 36)
-            if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['H', c], tab.loc['Beta', c], lhi])) and tab.loc[
-                    'alpha', c] != 0:
-                val = (tab.loc['H', c] * tab.loc['Beta', c] + lhi) / tab.loc['alpha', c]
+            if ans == 'Y' and not np.isclose(alpha, 0):
+                val = (Beta * H + lhi) / alpha
                 self.change_value('Y', c, val, 36)
-            if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['Y', c], tab.loc['H', c], lhi])) and tab.loc[
-                    'H', c] != 0:
-                val = (tab.loc['alpha', c] * tab.loc['Y', c] - lhi) / tab.loc['H', c]
+            if ans == 'Beta' and not np.isclose(H, 0):
+                val = (Y * alpha - lhi) / H
                 self.change_value('Beta', c, val, 36)
-            if not np.any(np.isnan([tab.loc['H', c], tab.loc['Y', c], tab.loc['Beta', c], lhi])) and tab.loc[
-                    'Y', c] != 0:
-                val = (tab.loc['H', c] * tab.loc['Beta', c] + lhi) / tab.loc['Y', c]
+            if ans == 'alpha' and not np.isclose(Y, 0):
+                val = (Beta * H + lhi) / Y
                 self.change_value('alpha', c, val, 36)
-            if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['Y', c], tab.loc['Beta', c], tab.loc['H', c]])):
-                val = tab.loc['alpha', c] * tab.loc['Y', c] - tab.loc['H', c] * tab.loc['Beta', c]
+            if ans == 'lhi':
+                val = Y * alpha - Beta * H
                 self.change_lhi(val)
             # specials
-            if not np.any(np.isnan([tab.loc['Beta', c], lhi])):
-                if tab.loc['Beta', c] != 0 and (tab.loc['Y', c] == 0 or tab.loc['alpha', c] == 0):
-                    val = - lhi / tab.loc['Beta', c]
-                    self.change_value('H', c, val, '36s')
-            if not np.any(np.isnan([lhi, tab.loc['alpha', c]])):
-                if tab.loc['alpha', c] != 0 and (tab.loc['H', c] == 0 or tab.loc['Beta', c] == 0):
-                    val = lhi / tab.loc['alpha', c]
-                    self.change_value('Y', c, val, '36s')
-            if not np.any(np.isnan([tab.loc['H', c], lhi])):
-                if tab.loc['H', c] != 0 and (tab.loc['Y', c] == 0 or tab.loc['alpha', c] == 0):
-                    val = -lhi / tab.loc['H', c]
-                    self.change_value('Beta', c, val, '36s')
-            if not np.any(np.isnan([lhi, tab.loc['Y', c]])):
-                if tab.loc['Y', c] != 0 and (tab.loc['H', c] == 0 or tab.loc['Beta', c] == 0):
-                    val = lhi / tab.loc['Y', c]
-                    self.change_value('alpha', c, val, '36s')
-            if not np.any(np.isnan([tab.loc['H', c], tab.loc['Beta', c]])):
-                if tab.loc['Y', c] == 0 or tab.loc['alpha', c] == 0:
-                    val = - tab.loc['H', c] * tab.loc['Beta', c]
-                    self.change_lhi(val, '36s1')
-            if not np.any(np.isnan([tab.loc['alpha', c], tab.loc['Y', c]])):
-                if tab.loc['H', c] == 0 or tab.loc['Beta', c] == 0:
-                    val = tab.loc['alpha', c] * tab.loc['Y', c]
-                    self.change_lhi(val, '36s2')
+            if np.isnan(H) and np.any(np.isclose((Y, alpha), 0)) and not np.isclose(Beta, 0):
+                val = - lhi / Beta
+                self.change_value('H', c, val, '36s')
+            if np.isnan(Y) and np.any(np.isclose((H, Beta), 0)) and not np.isclose(alpha, 0):
+                val = lhi / alpha
+                self.change_value('Y', c, val, '36s')
+            if np.isnan(Beta) and np.any(np.isclose((Y, alpha), 0)) and not np.isclose(H, 0):
+                val = -lhi / H
+                self.change_value('Beta', c, val, '36s')
+            if np.isnan(alpha) and np.any(np.isclose((H, Beta), 0)) and not np.isclose(Y, 0):
+                val = lhi / Y
+                self.change_value('alpha', c, val, '36s')
+            if np.isnan(lhi) and np.any(np.isclose((Y, alpha), 0)) and not np.any(np.isnan((H, Beta))):
+                val = - H * Beta
+                self.change_lhi(val, '36s1')
+            if np.isnan(lhi) and np.any(np.isclose((H, Beta), 0)) and not np.any(np.isnan((Y, alpha))):
+                val = alpha * Y
+                self.change_lhi(val, '36s2')
 
     def analyse37(self, column):
         tab = self.table
         c = column
         lhi = self.LHI
         if c >= 1:
-            # normal
-            if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['Y', c], tab.loc['Beta', c - 1], lhi])) and \
-                    tab.loc['Beta', c - 1] != 0:
-                val = (tab.loc['alpha', c - 1] * tab.loc['Y', c] - lhi) / tab.loc['Beta', c - 1]
+            Beta, H, Y, alpha = tab.loc['Beta', c - 1], tab.loc['H', c], tab.loc['Y', c], tab.loc['alpha', c - 1]
+            temp = dict(Beta=Beta, Y=Y, alpha=alpha, H=H, lhi=lhi)
+            ans = self.check_if_nan(**temp)
+            if ans == 'H' and not np.isclose(Beta, 0):
+                val = (Y * alpha - lhi) / Beta
                 self.change_value('H', c, val, 37)
-            if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['H', c], tab.loc['Beta', c - 1], lhi])) and \
-                    tab.loc['alpha', c - 1] != 0:
-                val = (tab.loc['H', c] * tab.loc['Beta', c - 1] + lhi) / tab.loc['alpha', c - 1]
+            if ans == 'Y' and not np.isclose(alpha, 0):
+                val = (Beta * H + lhi) / alpha
                 self.change_value('Y', c, val, 37)
-            if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['Y', c], tab.loc['H', c], lhi])) and \
-                    tab.loc['H', c] != 0:
-                val = (tab.loc['alpha', c - 1] * tab.loc['Y', c] - lhi) / tab.loc['H', c]
-                self.change_value('Beta', c - 1, val, 37)
-            if not np.any(np.isnan([tab.loc['H', c], tab.loc['Y', c], tab.loc['Beta', c - 1], lhi])) and \
-                    tab.loc['Y', c] != 0:
-                val = (tab.loc['H', c] * tab.loc['Beta', c - 1] + lhi) / tab.loc['Y', c]
-                self.change_value('alpha', c - 1, val, 37)
-            if not np.any(
-                    np.isnan([tab.loc['alpha', c - 1], tab.loc['Y', c], tab.loc['Beta', c - 1], tab.loc['H', c]])):
-                val = tab.loc['alpha', c - 1] * tab.loc['Y', c] - tab.loc['H', c] * tab.loc['Beta', c - 1]
+            if ans == 'Beta' and not np.isclose(H, 0):
+                val = (Y * alpha - lhi) / H
+                self.change_value('Beta', c, val, 37)
+            if ans == 'alpha' and not np.isclose(Y, 0):
+                val = (Beta * H + lhi) / Y
+                self.change_value('alpha', c, val, 37)
+            if ans == 'lhi':
+                val = Y * alpha - Beta * H
                 self.change_lhi(val)
-            # special
-            if not np.any(np.isnan([tab.loc['Beta', c - 1], lhi])):
-                if tab.loc['Beta', c - 1] != 0 and (tab.loc['Y', c] == 0 or tab.loc['alpha', c - 1] == 0):
-                    val = - lhi / tab.loc['Beta', c - 1]
-                    self.change_value('H', c, val, '37s')
-            if not np.any(np.isnan([lhi, tab.loc['alpha', c - 1]])):
-                if tab.loc['alpha', c - 1] != 0 and (tab.loc['H', c] == 0 or tab.loc['Beta', c - 1] == 0):
-                    val = lhi / tab.loc['alpha', c - 1]
-                    self.change_value('Y', c, val, '37s')
-            if not np.any(np.isnan([tab.loc['H', c], lhi])):
-                if tab.loc['H', c] != 0 and (tab.loc['Y', c] == 0 or tab.loc['alpha', c - 1] == 0):
-                    val = -lhi / tab.loc['H', c]
-                    self.change_value('Beta', c - 1, val, '37s')
-            if not np.any(np.isnan([lhi, tab.loc['Y', c]])):
-                if tab.loc['Y', c] != 0 and (tab.loc['H', c] == 0 or tab.loc['Beta', c - 1] == 0):
-                    val = lhi / tab.loc['Y', c]
-                    self.change_value('alpha', c - 1, val, '37s')
-            if not np.any(np.isnan([tab.loc['H', c], tab.loc['Beta', c - 1]])):
-                if tab.loc['Y', c] == 0 or tab.loc['alpha', c - 1] == 0:
-                    val = - tab.loc['H', c] * tab.loc['Beta', c - 1]
-                    self.change_lhi(val, '37s1')
-            if not np.any(np.isnan([tab.loc['alpha', c - 1], tab.loc['Y', c]])):
-                if tab.loc['H', c] == 0 or tab.loc['Beta', c - 1] == 0:
-                    val = tab.loc['alpha', c - 1] * tab.loc['Y', c]
-                    self.change_lhi(val, '37s2')
+            if np.isnan(H) and np.any(np.isclose((Y, alpha), 0)) and not np.isclose(Beta, 0):
+                val = - lhi / Beta
+                self.change_value('H', c, val, '37s')
+            if np.isnan(Y) and np.any(np.isclose((H, Beta), 0)) and not np.isclose(alpha, 0):
+                val = lhi / alpha
+                self.change_value('Y', c, val, '37s')
+            if np.isnan(Beta) and np.any(np.isclose((Y, alpha), 0)) and not np.isclose(H, 0):
+                val = -lhi / H
+                self.change_value('Beta', c, val, '37s')
+            if np.isnan(alpha) and np.any(np.isclose((H, Beta), 0)) and not np.isclose(Y, 0):
+                val = lhi / Y
+                self.change_value('alpha', c, val, '37s')
+            if np.isnan(lhi) and np.any(np.isclose((Y, alpha), 0)) and not np.any(np.isnan((H, Beta))):
+                val = - H * Beta
+                self.change_lhi(val, '37s1')
+            if np.isnan(lhi) and np.any(np.isclose((H, Beta), 0)) and not np.any(np.isnan((Y, alpha))):
+                val = alpha * Y
+                self.change_lhi(val, '37s2')
+
+    def analyse38(self, column):
+        tab = self.table
+        c = column
+        alpha, Y, Q, V, lhi = tab.loc['alpha', c], tab.loc['Y', c], tab.loc['Q', c], tab.loc['V', c], self.LHI
+        temp = dict(alpha=alpha, Y=Y, Q=Q, V=V, lhi=lhi)
+        if 0 < c <= self.columns - 2:
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'Y' and not np.isclose(alpha * (Q - V), 0):
+                val = lhi * (Q - 1) / (alpha * (Q - V))
+                self.change_value('Y', c, val, 38)
+            if ans == 'V' and not np.isclose(Y * alpha, 0):
+                val = (lhi * (1 - Q) + Q * Y * alpha) / (Y * alpha)
+                self.change_value('V', c, val, 38)
+            if ans == 'Q' and not np.isclose(lhi - Y * alpha, 0):
+                val = (lhi - V * Y * alpha) / (lhi - Y * alpha)
+                self.change_value('Q', c, val, 38)
+            if ans == 'alpha' and not np.isclose(Y * (Q - V), 0):
+                val = lhi * (Q - 1) / (Y * (Q - V))
+                self.change_value('alpha', c, val, 38)
+            if ans == 'lhi' and not np.isclose(Q - 1, 0):
+                val = Y * alpha * (Q - V) / (Q - 1)
+                self.change_lhi(val)
 
     def analyse39(self, column):
         tab = self.table
         c = column
-        lhi = self.LHI
         if 0 < c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['V', c], tab.loc['Q', c], lhi])) and (
-                    tab.loc['Beta', c] * (tab.loc['Q', c] - tab.loc['V', c])) != 0:
-                val = lhi * (1 - tab.loc['V', c]) / (tab.loc['Beta', c] * (tab.loc['Q', c] - tab.loc['V', c]))
+            Beta, H, Q, V, lhi = tab.loc['Beta', c], tab.loc['H', c], tab.loc['Q', c], tab.loc['V', c], self.LHI
+            temp = dict(Beta=Beta, H=H, Q=Q, V=V, lhi=lhi)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'H' and not np.isclose(Beta * (Q - V), 0):
+                val = lhi * (V - 1) / (Beta * (Q - V))
                 self.change_value('H', c, val, 39)
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['H', c], tab.loc['Q', c], lhi])) and (
-                    tab.loc['Beta', c] * tab.loc['H', c] - lhi) != 0:
-                val = (tab.loc['Beta', c] * tab.loc['H', c] * tab.loc['Q', c] - lhi) / (
-                    tab.loc['Beta', c] * tab.loc['H', c] - lhi)
+            if ans == 'V' and not np.isclose(Beta * H + lhi, 0):
+                val = (Beta * H * Q + lhi) / (Beta * H + lhi)
                 self.change_value('V', c, val, 39)
-            if not np.any(np.isnan([tab.loc['Beta', c], tab.loc['H', c], tab.loc['V', c], lhi])) and (
-                    tab.loc['Beta', c] * tab.loc['H', c]) != 0:
-                val = (tab.loc['Beta', c] * tab.loc['H', c] * tab.loc['V', c] - lhi * (tab.loc['V', c] - 1)) / (
-                    tab.loc['Beta', c] * tab.loc['H', c])
+            if ans == 'Q' and not np.isclose(Beta * H, 0):
+                val = (Beta * H * V + lhi * (V - 1)) / (Beta * H)
                 self.change_value('Q', c, val, 39)
-            if not np.any(np.isnan([tab.loc['H', c], tab.loc['V', c], tab.loc['Q', c], lhi])) and (
-                    tab.loc['H', c] * (tab.loc['Q', c] - tab.loc['V', c])) != 0:
-                val = (lhi * (1 - tab.loc['V', c])) / (tab.loc['H', c] * (tab.loc['Q', c] - tab.loc['V', c]))
+            if ans == 'Beta' and not np.isclose(H * (Q - V), 0):
+                val = lhi * (V - 1) / (H * (Q - V))
                 self.change_value('Beta', c, val, 39)
-            if not np.any(np.isnan([tab.loc['H', c], tab.loc['V', c], tab.loc['Q', c], tab.loc['Beta', c]])) and (
-                    tab.loc['V', c] - 1) != 0:
-                val = (tab.loc['Beta', c] * tab.loc['H', c] * (tab.loc['V', c] - tab.loc['Q', c])) / (
-                    tab.loc['V', c] - 1)
+            if ans == 'lhi' and not np.isclose(V - 1, 0):
+                val = Beta * H * (Q - V) / (V - 1)
                 self.change_lhi(val)
 
     def analyse40(self, column):
         tab = self.table
         c = column
-        lhi = self.LHI
         if 0 < c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['alpha', c - 1], tab.loc['Q', c], lhi])) and (
-                    lhi * (tab.loc['Q', c] - 1) + tab.loc['alpha', c - 1] * tab.loc['Y', c]) != 0:
-                val = tab.loc['alpha', c - 1] * tab.loc['Y', c] * tab.loc['Q', c] / (
-                    lhi * (tab.loc['Q', c] - 1) + tab.loc['alpha', c - 1] * tab.loc['Y', c])
+            Y, alpha_1, Q, V, lhi = tab.loc['Y', c], tab.loc['alpha', c - 1], tab.loc['Q', c], tab.loc['V', 1], self.LHI
+            temp = dict(Y=Y, alpha_1=alpha_1, Q=Q, V=V, lhi=lhi)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'V' and not np.isclose(lhi * (Q - 1) + Y * alpha_1, 0):
+                val = Q * Y * alpha_1 / (lhi * (Q - 1) + Y * alpha_1)
                 self.change_value('V', c, val, 40)
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['alpha', c - 1], tab.loc['V', c], lhi])) and (
-                    tab.loc['alpha', c - 1] * tab.loc['Y', c] - lhi * tab.loc['V', c]) != 0:
-                val = tab.loc['V', c] * (lhi - tab.loc['alpha', c - 1] * tab.loc['Y', c]) / (
-                    lhi * tab.loc['V', c] - tab.loc['alpha', c - 1] * tab.loc['Y', c])
+            if ans == 'Q' and not np.isclose(lhi * V - Y * alpha_1, 0):
+                val = V * (lhi - Y * alpha_1) / (lhi * V - Y * alpha_1)
                 self.change_value('Q', c, val, 40)
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['V', c], tab.loc['Q', c], lhi])) and \
-                    tab.loc['Y', c] * (tab.loc['V', c] - tab.loc['Q', c]) != 0:
-                val = tab.loc['V', c] * lhi * (1 - tab.loc['Q', c]) / (
-                    tab.loc['Y', c] * (tab.loc['V', c] - tab.loc['Q', c]))
-                self.change_value('alpha', c, val, 40)
-            if not np.any(np.isnan([tab.loc['V', c], tab.loc['alpha', c - 1], tab.loc['Q', c], lhi])) and \
-                    tab.loc['alpha', c - 1] * (tab.loc['V', c] - tab.loc['Q', c]) != 0:
-                val = tab.loc['V', c] * lhi * (1 - tab.loc['Q', c]) / (
-                    tab.loc['alpha', c - 1] * (tab.loc['V', c] - tab.loc['Q', c]))
+            if ans == 'alpha_1' and not np.isclose(Y * (Q - V), 0):
+                val = lhi * V * (Q - 1) / (Y * (Q - V))
+                self.change_value('alpha', c - 1, val, 40)
+            if ans == 'Y' and not np.isclose(alpha_1 * (Q - V), 0):
+                val = lhi * V * (Q - 1) / (alpha_1 * (Q - V))
                 self.change_value('Y', c, val, 40)
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['alpha', c - 1], tab.loc['Q', c], tab.loc['V', c]])) and (
-                    tab.loc['V', c] * (1 - tab.loc['Q', c])) != 0:
-                val = tab.loc['alpha', c - 1] * tab.loc['Y', c] * (tab.loc['V', c] - tab.loc['Q', c]) / (
-                    tab.loc['V', c] * (1 - tab.loc['Q', c]))
+            if ans == 'lhi' and not np.isclose(V * (Q - 1), 0):
+                val = Y * alpha_1 * (Q - V) / (V * (Q - 1))
                 self.change_lhi(val)
 
     def analyse41(self, column):
         tab = self.table
         c = column
-        lhi = self.LHI
         if 1 <= c <= self.columns - 2:
-            if not np.any(np.isnan([tab.loc['V', c], tab.loc['Beta', c - 1], tab.loc['H', c], lhi])) and (
-                    lhi * (1 - tab.loc['V', c]) + tab.loc['Beta', c - 1] * tab.loc['H', c]) != 0:
-                val = tab.loc['Beta', c - 1] * tab.loc['H', c] * tab.loc['V', c] / (
-                    lhi * (1 - tab.loc['V', c]) + tab.loc['Beta', c - 1] * tab.loc['H', c])
+            H, Beta_1, Q, V, lhi = tab.loc['H', c], tab.loc['Beta', c - 1], tab.loc['Q', c], tab.loc['V', 1], self.LHI
+            temp = dict(H=H, Beta_1=Beta_1, Q=Q, V=V, lhi=lhi)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'Q' and not np.isclose(Beta_1 * H + lhi * (1 - V), 0):
+                val = Beta_1 * H * V / (Beta_1 * H + lhi * (1 - V))
                 self.change_value('Q', c, val, 41)
-            if not np.any(np.isnan([tab.loc['Q', c], tab.loc['Beta', c - 1], tab.loc['H', c], lhi])) and (
-                    tab.loc['Beta', c - 1] * tab.loc['H', c] + tab.loc['Q', c] * lhi) != 0:
-                val = tab.loc['Q', c] * (tab.loc['Beta', c - 1] * tab.loc['H', c] + lhi) / (
-                    tab.loc['Beta', c - 1] * tab.loc['H', c] + tab.loc['Q', c] * lhi)
+            if ans == 'V' and not np.isclose(Beta_1 * H + lhi * Q, 0):
+                val = Q * (Beta_1 * H + lhi) / (Beta_1 * H + lhi * Q)
                 self.change_value('V', c, val, 41)
-            if not np.any(np.isnan([tab.loc['V', c], tab.loc['Q', c], tab.loc['H', c], lhi])) and (
-                    tab.loc['H', c] * (tab.loc['V', c] - tab.loc['Q', c])) != 0:
-                val = tab.loc['Q', c] * lhi * (1 - tab.loc['V', c]) / (
-                    tab.loc['H', c] * (tab.loc['V', c] - tab.loc['Q', c]))
+            if ans == 'Beta_1' and not np.isclose(H * (Q - V), 0):
+                val = lhi * Q * (V - 1) / (H * (Q - V))
                 self.change_value('Beta', c - 1, val, 41)
-            if not np.any(np.isnan([tab.loc['V', c], tab.loc['Beta', c - 1], tab.loc['Q', c], lhi])) and (
-                    tab.loc['Beta', c - 1] * (tab.loc['V', c] - tab.loc['Q', c])) != 0:
-                val = tab.loc['Q', c] * lhi * (1 - tab.loc['V', c]) / (
-                    tab.loc['Beta', c - 1] * (tab.loc['V', c] - tab.loc['Q', c]))
+            if ans == 'H' and not np.isclose(Beta_1 * (Q - V), 0):
+                val = lhi * Q * (V - 1) / (Beta_1 * (Q - V))
                 self.change_value('H', c, val, 41)
-            if not np.any(np.isnan([tab.loc['V', c], tab.loc['Beta', c - 1], tab.loc['H', c], tab.loc['Q', c]])) and (
-                    tab.loc['Q', c] * (tab.loc['V', c] - 1)) != 0:
-                val = tab.loc['Beta', c - 1] * tab.loc['H', c] * (tab.loc['Q', c] - tab.loc['V', c]) / (
-                    tab.loc['Q', c] * (tab.loc['V', c] - 1))
-                self.change_value('Q', c, val, 41)
+            if ans == 'lhi' and not np.isclose(Q * (V - 1)):
+                val = Beta_1 * H * (Q - V) / (Q * (V - 1))
+                self.change_lhi(val)
 
     def analyse42(self, column):
         tab = self.table
         c = column
-        lhi = self.LHI
         if 1 <= c <= self.columns - 2:
-            if not np.any(
-                    np.isnan(
-                        [tab.loc['alpha', c - 1], tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['f', c],
-                         lhi])) and (tab.loc['f', c] * tab.loc['Beta', c - 1]) != 0:
-                val = (tab.loc['alpha', c - 1] * tab.loc['Beta', c] * tab.loc['f', c] - lhi) / (
-                    tab.loc['f', c] * tab.loc['Beta', c - 1])
+            lhi, alpha_1 = self.LHI, tab.loc['alpha', c - 1]
+            Beta, Beta_1, f, alpha = tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['f', c], tab.loc['alpha', c]
+            temp = dict(Beta=Beta, Beta_1=Beta_1, alpha=alpha, alpha_1=alpha_1, f=f, lhi=lhi)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'alpha' and not np.isclose(Beta_1 * f, 0):
+                val = (Beta * alpha_1 * f - lhi) / (Beta_1 * f)
                 self.change_value('alpha', c, val, 42)
-            if not np.any(
-                np.isnan(
-                    [tab.loc['alpha', c], tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['f', c], lhi])) and (
-                    tab.loc['f', c] * tab.loc['Beta', c]) != 0:
-                val = (tab.loc['alpha', c] * tab.loc['Beta', c - 1] * tab.loc['f', c] + lhi) / (
-                    tab.loc['f', c] * tab.loc['Beta', c])
+            if ans == 'alpha_1' and not np.isclose(Beta * f, 0):
+                val = (Beta_1 * alpha * f + lhi) / (Beta * f)
                 self.change_value('alpha', c - 1, val, 42)
-            if not np.any(
-                    np.isnan(
-                        [tab.loc['alpha', c - 1], tab.loc['alpha', c], tab.loc['Beta', c - 1], tab.loc['f', c],
-                         lhi])) and (tab.loc['f', c] * tab.loc['alpha', c - 1]) != 0:
-                val = (tab.loc['alpha', c] * tab.loc['Beta', c - 1] * tab.loc['f', c] + lhi) / (
-                    tab.loc['f', c] * tab.loc['alpha', c - 1])
+            if ans == 'Beta' and not np.isclose(alpha_1 * f, 0):
+                val = (Beta_1 * alpha * f + lhi) / (alpha_1 * f)
                 self.change_value('Beta', c, val, 42)
-            if not np.any(
-                    np.isnan(
-                        [tab.loc['alpha', c - 1], tab.loc['alpha', c], tab.loc['Beta', c - 1], tab.loc['f', c],
-                         lhi])) and (tab.loc['f', c] * tab.loc['alpha', c]) != 0:
-                val = (tab.loc['alpha', c - 1] * tab.loc['Beta', c] * tab.loc['f', c] - lhi) / (
-                    tab.loc['f', c] * tab.loc['alpha', c])
+            if ans == 'Beta_1' and not np.isclose(alpha * f, 0):
+                val = (Beta * alpha_1 * f - lhi) / (alpha * f)
                 self.change_value('Beta', c - 1, val, 42)
-            if not np.any(
-                    np.isnan(
-                        [tab.loc['alpha', c - 1], tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['f', c], lhi])):
-                if (tab.loc['alpha', c] * tab.loc['Beta', c - 1] - tab.loc['alpha', c - 1] * tab.loc['Beta', c]) != 0:
-                    val = lhi / (
-                        tab.loc['alpha', c - 1] * tab.loc['Beta', c] - tab.loc['alpha', c] * tab.loc['Beta', c - 1])
-                    self.change_value('f', c, val, 42)
-            if not np.any(
-                    np.isnan([tab.loc['alpha', c - 1], tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['f', c],
-                              tab.loc['alpha', c]])):
-                val = tab.loc['f', c] * (tab.loc['alpha', c - 1] * tab.loc['Beta', c] - tab.loc['alpha', c] * tab.loc[
-                    'Beta', c - 1])
+            if ans == 'f' and not np.isclose(Beta * alpha_1 - Beta_1 * alpha, 0):
+                val = lhi / (Beta * alpha_1 - Beta_1 * alpha)
+                self.change_value('f', c, val, 42)
+            if ans == 'lhi':
+                val = f * (Beta * alpha_1 - Beta_1 * alpha)
                 self.change_lhi(val)
 
     def analyse43(self, column):
         tab = self.table
         c = column
-        lhi = self.LHI
         if self.columns - 2 >= c >= 0:
-            """check h"""
-            if not np.any(
-                    np.isnan([tab.loc['Y', c], tab.loc['Y', c + 1], tab.loc['H', c + 1], tab.loc['d', c], lhi])) and \
-                    tab.loc['Y', c + 1] != 0:
-                val = (tab.loc['H', c + 1] * tab.loc['Y', c] + lhi * tab.loc['d', c]) / tab.loc['Y', c + 1]
+            lhi, d = self.LHI, tab.loc['d', c]
+            H, H1, Y, Y1 = tab.loc['H', c], tab.loc['H', c + 1], tab.loc['Y', c], tab.loc['Y', c + 1]
+            temp = dict(H=H, H1=H1, Y=Y, Y1=Y1, d=d, lhi=lhi)
+            ans = self.check_if_nan(**temp)
+            if ans == '':
+                return
+            if ans == 'H' and not np.isclose(Y1, 0):
+                val = (H1 * Y + lhi * d) / Y1
                 self.change_value('H', c, val, 43)
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['Y', c + 1], tab.loc['H', c], tab.loc['d', c], lhi])) and \
-                    tab.loc['Y', c] != 0:
-                val = (tab.loc['H', c] * tab.loc['Y', c + 1] + lhi * tab.loc['d', c]) / tab.loc['Y', c]
+            if ans == 'H1' and not np.isclose(Y, 0):
+                val = (H * Y1 - lhi * d) / Y
                 self.change_value('H', c + 1, val, 43)
-            """check y"""
-            if not np.any(
-                    np.isnan([tab.loc['H', c], tab.loc['Y', c + 1], tab.loc['H', c + 1], tab.loc['d', c], lhi])) and \
-                    tab.loc['H', c + 1] != 0:
-                val = (tab.loc['H', c] * tab.loc['Y', c + 1] - lhi * tab.loc['d', c]) / tab.loc['H', c + 1]
+            if ans == 'Y' and not np.isclose(H1, 0):
+                val = (H * Y1 - lhi * d) / H1
                 self.change_value('Y', c, val, 43)
-            if not np.any(np.isnan([tab.loc['Y', c], tab.loc['H', c], tab.loc['H', c + 1], tab.loc['d', c], lhi])) and \
-                    tab.loc['H', c] != 0:
-                val = (tab.loc['H', c + 1] * tab.loc['Y', c] + lhi * tab.loc['d', c]) / tab.loc['H', c]
+            if ans == 'Y1' and not np.isclose(H, 0):
+                val = (H1 * Y + lhi * d) / H
                 self.change_value('Y', c + 1, val, 43)
-            """rest"""
-            if not np.any(np.isnan(
-                    [tab.loc['Y', c], tab.loc['Y', c + 1], tab.loc['H', c + 1], tab.loc['H', c], lhi])) and lhi != 0:
-                val = (tab.loc['H', c] * tab.loc['Y', c + 1] - tab.loc['H', c + 1] * tab.loc['Y', c]) / lhi
+            if ans == 'd' and not np.isclose(lhi, 0):
+                val = (H * Y1 - H1 * Y) / lhi
                 self.change_value('d', c, val, 43)
-            if not np.any(np.isnan(
-                    [tab.loc['Y', c], tab.loc['Y', c + 1], tab.loc['H', c], tab.loc['d', c], tab.loc['H', c + 1]])) and \
-                    tab.loc['d', c] != 0:
-                val = (tab.loc['H', c] * tab.loc['Y', c + 1] - tab.loc['H', c + 1] * tab.loc['Y', c]) / tab.loc['d', c]
-                self.change_lhi(val)
+            if ans == 'lhi' and not np.isclose(d, 0):
+                val = (H * Y1 - H1 * Y) / d
 
     def analyse44(self, i):
         tab = self.table
@@ -793,7 +807,16 @@ class MainTable:
             self.change_value('Beta', c2, val, 45)
             del self.magnify[i]
 
+    def check_if_nan(self, **kwargs):
+        ans = []
+        for key, val in kwargs.items():
+            if np.isnan(val):
+                ans.append(key)
+        ans = ans[0] if len(ans) == 1 else ''
+        return ans
+
     def plot(self):
+        undo = False
         plt.ioff()
         plt.close('all')
         y = list(self.table.loc['Y'])
@@ -801,7 +824,11 @@ class MainTable:
         f = list(self.table.loc['f'])
         d = list(self.table.loc['d', 0:self.columns - 2])
         phi = list(self.table.loc['phi'])
-        phi = [el if not el == '' else np.nan for el in phi]
+        if np.all(np.isnan(phi)):
+            self.set_vignetting(1)
+            phi = list(self.table.loc['phi'])
+            undo = True
+        phi = [el / 2 if not el == '' else np.nan for el in phi]
         y_max = np.abs(y).max()
         h_max = np.abs(h).max()
         phi_max = np.nanmax(np.abs(phi))
@@ -823,8 +850,8 @@ class MainTable:
                 self.draw_plus(i, k, ax)
             else:
                 self.draw_minus(i, k, ax)
-        plt.ylim(-ax_max, ax_max)
-        plt.xlim(-1, d[-1] + 1)
+        plt.ylim(-ax_max - 5, ax_max + 5)
+        plt.xlim(min(d1) - 1, d1[-1] + 1)
         ax.set_aspect('equal')
         a = 2 * ax_max
         b = d[-1] + 2
@@ -836,6 +863,8 @@ class MainTable:
         plt.savefig('test.png', dpi=300)
         plt.ion()
         plt.show()
+        if undo:
+            self.undo_changes()
 
     def draw_stop(self, x, y, ax):
         ax.plot((x, x), (y, y + 10), marker='_', markevery=2, color='k', markersize=10)
