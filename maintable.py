@@ -54,7 +54,8 @@ class MainTable:
     def magnification(self, from_col, to_col, magn, var):
         if from_col > to_col:
             from_col, to_col = to_col, from_col
-        if to_col >= self.columns:
+        from_col -= 1
+        if to_col >= self.columns or from_col < 0:
             raise ValueError()
         else:
             for item in self.magnify:
@@ -62,10 +63,46 @@ class MainTable:
                     return
             self.magnify.append({'from': from_col, 'to': to_col, 'magn': magn, 'type': var})
 
+        if len(self.magnify) > 0:
+            for i, elem in enumerate(self.magnify):
+                from_col, to_col = elem['from'], elem['to']
+                if elem['type'] == 'V':
+                    if not np.all(np.isnan((self.table.loc['alpha', from_col], self.table.loc['alpha', to_col]))):
+                        self.analyse44(i)
+                elif elem['type'] == 'Q':
+                    if not np.all(np.isnan((self.table.loc['Beta', from_col], self.table.loc['Beta', to_col]))):
+                        self.analyse45(i)
+
     def iterate(self, row, col, from_col, to_col, var, target_dimension, start_value):
         tab = self.table
+        increament = start_value
         if not np.isnan(tab.loc[row, col]):
             return
+        dim = np.array((self.table.loc[var, from_col:to_col - 1]), dtype=np.float64)
+        if not np.any(np.isnan(dim)):
+            return
+        dim[np.isnan(dim)] = 0
+        prev_dim = np.sum(dim)
+        for i in range(100):
+            self.change_value(row, col, start_value, 0)
+            dim = np.array((self.table.loc[var, from_col:to_col - 1]), dtype=np.float64)
+            if np.any(np.isnan(dim)):
+                self.undo_changes()
+                return
+            cur_dim = np.sum(dim)
+            print('prev: {}; curr: {}, target: {}'.format(prev_dim, cur_dim, target_dimension))
+            if prev_dim < target_dimension < cur_dim or cur_dim < target_dimension < prev_dim:
+                increament *= -1 / 3
+            elif target_dimension < prev_dim < cur_dim or target_dimension > prev_dim > cur_dim:
+                increament *= -1
+            else:
+                increament *= 2
+            prev_dim = cur_dim
+            start_value += increament
+            if np.isclose(target_dimension - cur_dim, 0):
+                break
+            self.undo_changes()
+            #print('{} inc: {}, next_try: {}'.format(i, increament, start_value))
 
     def change_lhi(self, value, func=0):
         if np.isnan(self.LHI):
@@ -108,10 +145,10 @@ class MainTable:
             for i, elem in enumerate(self.magnify):
                 from_col, to_col = elem['from'], elem['to']
                 if elem['type'] == 'V':
-                    if not np.all(np.isnan(self.table.loc['alpha', from_col], self.table.loc['alpha', to_col])):
+                    if not np.all(np.isnan((self.table.loc['alpha', from_col], self.table.loc['alpha', to_col]))):
                         self.analyse44(i)
                 elif elem['type'] == 'Q':
-                    if not np.all(np.isnan(self.table.loc['Beta', from_col], self.table.loc['Beta', to_col])):
+                    if not np.all(np.isnan((self.table.loc['Beta', from_col], self.table.loc['Beta', to_col]))):
                         self.analyse45(i)
 
         self.check_lhi_function()
@@ -120,6 +157,7 @@ class MainTable:
         self.analyse15(column)
         self.analyse16(column)
         self.analyse17(column)
+        self.analyse19(column)
         self.analyse22(column)
         self.analyse23(column)
         self.analyse24(column)
@@ -159,7 +197,8 @@ class MainTable:
         self.analyse36(column)
         self.analyse37(column + 1)
         self.analyse38(column)
-        self.analyse40(column)
+        self.analyse40(column + 1)
+        self.analyse42(column)
         self.analyse42(column + 1)
 
     def check_v_function(self, column):
@@ -188,7 +227,7 @@ class MainTable:
         self.analyse36(column)
         self.analyse37(column)
         self.analyse38(column)
-        self.analyse40(column + 1)
+        self.analyse40(column)
         self.analyse43(column)
         self.analyse43(column - 1)
 
@@ -212,9 +251,13 @@ class MainTable:
 
     def check_q_function(self, column):
         self.analyse21(column)
+        self.analyse23(column)
         self.analyse24(column)
+        self.analyse26(column)
         self.analyse38(column)
         self.analyse39(column)
+        self.analyse40(column)
+        self.analyse41(column)
 
     def check_t_function(self, column):
         # deleted two function, they didn't have a T term, so it will be run from some other place.
@@ -250,8 +293,8 @@ class MainTable:
     def analyse14(self, column):
         tab = self.table
         c = column
-        V, alpha, alpha_1 = tab.loc['V', c], tab.loc['alpha', c], tab.loc['alpha', c]
         if 1 <= c <= self.columns - 2:
+            V, alpha, alpha_1 = tab.loc['V', c], tab.loc['alpha', c], tab.loc['alpha', c - 1]
             temp = dict(V=V, alpha=alpha, alpha_1=alpha_1)
             ans = self.check_if_nan(**temp)
             if ans == '':
@@ -263,6 +306,7 @@ class MainTable:
                 val = alpha_1 / V
                 self.change_value('alpha', c, val, 14)
             if ans == 'V' and not np.isclose(alpha, 0):
+                self.history.append(temp)
                 val = alpha_1 / alpha
                 self.change_value('V', c, val, 14)
 
@@ -273,15 +317,15 @@ class MainTable:
             H, f, alpha, alpha_1 = tab.loc['H', c], tab.loc['f', c], tab.loc['alpha', c], tab.loc['alpha', c - 1]
             temp = dict(alpha=alpha, alpha_1=alpha_1, H=H, f=f)
             ans = self.check_if_nan(**temp)
-            if ans == '':
-                return
-            if ans == 'alpha' and not np.isclose(f, 0):
-                val = alpha_1 + H / f
+            '''if ans == '':
+                return'''
+            if 'alpha' in ans and not np.isclose(f, 0):
+                val = alpha_1 if H == 0 else alpha_1 + H / f
                 self.change_value('alpha', c, val, 15)
-            if ans == 'alpha_1' and not np.isclose(f, 0):
-                val = alpha - H / f
+            if 'alpha_1' in ans and not np.isclose(f, 0):
+                val = alpha if H == 0 else alpha - H / f
                 self.change_value('alpha', c - 1, val, 15)
-            if ans == 'H':
+            if ans == 'H' and not np.isclose(alpha - alpha_1, 0):
                 val = f * (alpha - alpha_1)
                 self.change_value('H', c, val, 15)
             if ans == 'f' and not np.isclose(alpha - alpha_1, 0):
@@ -377,16 +421,16 @@ class MainTable:
             H1, H, alpha, d = tab.loc['H', c + 1], tab.loc['H', c], tab.loc['alpha', c], tab.loc['d', c]
             temp = dict(H1=H1, H=H, alpha=alpha, d=d)
             ans = self.check_if_nan(**temp)
-            if ans == '':
-                return
-            if ans == 'H':
-                val = H1 + alpha * d
+            '''if ans == '':
+                return'''
+            if 'H' in ans:
+                val = H1 if np.any(np.isclose((alpha, d), 0)) else H1 + alpha * d
                 self.change_value('H', c, val, 20)
-            if ans == 'H1':
-                val = H - alpha * d
+            if 'H1' in ans:
+                val = H if np.any(np.isclose((alpha, d), 0)) else H - alpha * d
                 self.change_value('H', c + 1, val, 20)
-            if ans == 'alpha' and not np.isclose(tab.loc['d', c], 0):
-                val = (H - H1) / d
+            if 'alpha' in ans and not np.isclose(tab.loc['d', c], 0):
+                val = 0 if np.isclose(H - H1, 0) else (H - H1) / d
                 self.change_value('alpha', c, val, 20)
             if ans == 'd' and not np.isclose(alpha, 0):
                 val = (H - H1) / alpha
@@ -596,10 +640,10 @@ class MainTable:
                 self.change_value('Y', c, val, 37)
             if ans == 'Beta' and not np.isclose(H, 0):
                 val = (Y * alpha - lhi) / H
-                self.change_value('Beta', c, val, 37)
+                self.change_value('Beta', c - 1, val, 37)
             if ans == 'alpha' and not np.isclose(Y, 0):
                 val = (Beta * H + lhi) / Y
-                self.change_value('alpha', c, val, 37)
+                self.change_value('alpha', c - 1, val, 37)
             if ans == 'lhi':
                 val = Y * alpha - Beta * H
                 self.change_lhi(val)
@@ -611,10 +655,10 @@ class MainTable:
                 self.change_value('Y', c, val, '37s')
             if np.isnan(Beta) and np.any(np.isclose((Y, alpha), 0)) and not np.isclose(H, 0):
                 val = -lhi / H
-                self.change_value('Beta', c, val, '37s')
+                self.change_value('Beta', c - 1, val, '37s')
             if np.isnan(alpha) and np.any(np.isclose((H, Beta), 0)) and not np.isclose(Y, 0):
                 val = lhi / Y
-                self.change_value('alpha', c, val, '37s')
+                self.change_value('alpha', c - 1, val, '37s')
             if np.isnan(lhi) and np.any(np.isclose((Y, alpha), 0)) and not np.any(np.isnan((H, Beta))):
                 val = - H * Beta
                 self.change_lhi(val, '37s1')
@@ -676,7 +720,7 @@ class MainTable:
         tab = self.table
         c = column
         if 0 < c <= self.columns - 2:
-            Y, alpha_1, Q, V, lhi = tab.loc['Y', c], tab.loc['alpha', c - 1], tab.loc['Q', c], tab.loc['V', 1], self.LHI
+            Y, alpha_1, Q, V, lhi = tab.loc['Y', c], tab.loc['alpha', c - 1], tab.loc['Q', c], tab.loc['V', c], self.LHI
             temp = dict(Y=Y, alpha_1=alpha_1, Q=Q, V=V, lhi=lhi)
             ans = self.check_if_nan(**temp)
             if ans == '':
@@ -701,7 +745,7 @@ class MainTable:
         tab = self.table
         c = column
         if 1 <= c <= self.columns - 2:
-            H, Beta_1, Q, V, lhi = tab.loc['H', c], tab.loc['Beta', c - 1], tab.loc['Q', c], tab.loc['V', 1], self.LHI
+            H, Beta_1, Q, V, lhi = tab.loc['H', c], tab.loc['Beta', c - 1], tab.loc['Q', c], tab.loc['V', c], self.LHI
             temp = dict(H=H, Beta_1=Beta_1, Q=Q, V=V, lhi=lhi)
             ans = self.check_if_nan(**temp)
             if ans == '':
@@ -812,7 +856,8 @@ class MainTable:
         for key, val in kwargs.items():
             if np.isnan(val):
                 ans.append(key)
-        ans = ans[0] if len(ans) == 1 else ''
+        ans = ans[0] if len(ans) == 1 else ans
+        ans = '' if len(ans) == 0 else ans
         return ans
 
     def plot(self):

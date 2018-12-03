@@ -45,6 +45,160 @@
     on_text_validate: app.main.validate_input(self)
     disabled: False if isnan(self.data) else True
 
+<CCheckBox@CheckBox>:
+    height: 3 * sheight // 4
+    size_hint_y: None
+
+<GBoxLayout@BoxLayout>:
+    height: 3 * sheight / 4
+    size_hint_y: None
+    pos_hint: {'center_x': 0.5}
+
+<IterPopup>:
+    title: 'Iteration'
+    id: iter_pop
+    BoxLayout:
+        orientation: 'vertical'
+        GridLayout:
+            cols: 4
+            CLabel:
+                text: 'Dimensions'
+                size_hint_x: 1
+            CLabel:
+                text: 'Range of Elements'
+                size_hint_x: 1
+            CLabel:
+                text: 'Target dim.'
+                size_hint_x: 1
+            CLabel:
+                text: 'Start value'
+                size_hint_x: 1
+            GBoxLayout:
+                orientation: 'horizontal'
+                CCheckBox:
+                    active: True
+                    group: 'dim'
+                    id: d_check
+                CLabel:
+                    size_hint_x: 1
+                    text: 'd'
+                CCheckBox:
+                    group: 'dim'
+                    id: L_check
+                CLabel:
+                    text: 'L'
+                    size_hint_x: 1
+                CCheckBox:
+                    group: 'dim'
+                CLabel:
+                    text: 'T'
+                    size_hint_x: 1
+            GBoxLayout:
+                orientation: 'horizontal'
+                CLabel:
+                    text: 'From'
+                    size_hint_x: 1
+                CSTextInput:
+                    size_hint_x: 1
+                    id: iter_from_input
+                CLabel:
+                    text: 'To'
+                    size_hint_x: 1
+                CSTextInput:
+                    size_hint_x: 1
+                    id: iter_to_input
+            CSTextInput:
+                size_hint_x: 1
+                id: iter_target_input
+            CSTextInput:
+                size_hint_x: 1
+                id: iter_start_input
+            CSTextInput:
+                size_hint_x: 1
+                id: iter_row
+            CSTextInput:
+                size_hint_x: 1
+                id: iter_col
+        EWidget:
+        GBoxLayout:
+            orientation: 'horizontal'
+            EWidget
+            CButton:
+                text: 'ok'
+                on_release: iter_pop.dismiss()
+                on_release: app.main.iterate(d_check.active, L_check.active, iter_from_input.text, iter_to_input.text, iter_target_input.text, iter_start_input.text, iter_row.text, iter_col.text)
+
+<MagPopup>:
+    title: 'Magnify'
+    id: mag_pop
+    BoxLayout:
+        orientation: 'vertical'
+        GridLayout:
+            cols: 3
+            CLabel:
+                text: 'Kind of magnification'
+                size_hint_x: 1
+            CLabel:
+                text: 'Between elements'
+                size_hint_x: 1
+            CLabel:
+                text: 'Magnification value'
+                size_hint_x: 1
+            GBoxLayout:
+                orientation: 'horizontal'
+                size_hint_x: 1
+                CLabel:
+                    text: 'Aperture'
+                    size_hint_x: 1
+                CLabel:
+                    text: 'Field'
+                    size_hint_x: 1
+            GBoxLayout:
+                orientation: 'horizontal'
+                size_hint_x: 1
+                CLabel:
+                    text: 'From'
+                    size_hint_x: 1
+                CLabel:
+                    text: 'To'
+                    size_hint_x: 1
+            GBoxLayout:
+            GBoxLayout:
+                orientation: 'horizontal'
+                CCheckBox:
+                    active: True
+                    group: 'mag'
+                    id: v_check
+                CLabel:
+                    text: 'V'
+                    size_hint_x: 1
+                CCheckBox:
+                    group: 'mag'
+                CLabel:
+                    text: 'Q'
+                    size_hint_x: 1
+
+            GBoxLayout:
+                orientation: 'horizontal'
+                CSTextInput:
+                    size_hint_x: 1
+                    id: mag_from_input
+                CSTextInput:
+                    size_hint_x: 1
+                    id: mag_to_input
+            CSTextInput:
+                size_hint_x: 1
+                id: mag_val_input
+        EWidget:
+        GBoxLayout:
+            orientation: 'horizontal'
+            EWidget
+            CButton:
+                text: 'ok'
+                on_release: mag_pop.dismiss()
+                on_release: app.main.magnify(v_check.active, mag_from_input.text, mag_to_input.text, mag_val_input.text)
+
+
 <Col>:
     orientation: 'vertical'
     size_hint: None, None
@@ -150,16 +304,19 @@
                 on_release: vignette_input.data = nan
             CButton:
                 text: 'Magnify'
-                disabled: True
+                on_release: app.main.mag_pop.open()
             CButton:
                 text: 'Iteration'
-                disabled: True
+                on_release: app.main.iter_pop.open()
             CButton:
                 text: 'Plot'
                 on_release: app.main.plot()
             CButton:
                 text: 'Export'
                 on_release: app.main.export()
+			CButton:
+                text: 'debug'
+                on_release: app.main.debug()
         BoxLayout:
             orientation: 'horizontal'
             pos_hint: {'center_x': 0.5}

@@ -1,14 +1,18 @@
 from math import isnan
 
 from kivy.app import App
+from kivy.config import Config
 from kivy.core.window import Window
 from kivy.uix.behaviors import FocusBehavior
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.popup import Popup
 from kivy.uix.recycleboxlayout import RecycleBoxLayout
 from kivy.uix.recycleview import RecycleView
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.screenmanager import Screen, ScreenManager
 from maintable import MainTable
+
+Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
 
 
 class SelectableRecycleBoxLayout(FocusBehavior, RecycleBoxLayout):
@@ -24,6 +28,14 @@ class Col(RecycleDataViewBehavior, BoxLayout):
         self.index = data['col_number']
         return super(Col, self).refresh_view_attrs(
             rv, index, data)
+
+
+class IterPopup(Popup):
+    pass
+
+
+class MagPopup(Popup):
+    pass
 
 
 class RV(RecycleView):
@@ -95,7 +107,7 @@ class MainWidget(Screen):
 
     def gen_table(self, cols):
         nan = float('nan')
-        self.ids.table.data = [{'col_number': i, 'f': nan, 'd': nan, 'h': nan,  'alpha': nan,
+        self.ids.table.data = [{'col_number': i, 'f': nan, 'd': nan, 'h': nan, 'alpha': nan,
                                 'v': nan, 'l': nan, 'y1': nan, 'beta': nan, 'q': nan, 't': nan, 'phi': nan} for i in range(cols)]
         self.table2 = MainTable(cols)
 
@@ -118,8 +130,29 @@ class MainWidget(Screen):
     def export(self):
         self.table2.table.to_csv('out.csv')
 
+    def debug(self):
+        with open('debug.log', 'w') as file:
+            for line in self.table2.history:
+                file.write('{}\n'.format(line))
+
     def update_label(self, msg):
         self.ids.info_label.text = msg
+
+    def magnify(self, v_check, from_col, to_col, val):
+        var = 'V' if v_check else 'Q'
+        self.table2.magnification(float(from_col), float(to_col), float(val), var)
+        self.update_table()
+
+    def iterate(self, d_check, L_check, from_c, to_c, targ, start, row, col):
+        if not (d_check or L_check):
+            dim = 'T'
+        elif d_check:
+            dim = 'd'
+        else:
+            dim = 'L'
+        from_c, to_c, targ, start, col = float(from_c), float(to_c), float(targ), float(start), float(col)
+        self.table2.iterate(row, col, from_c, to_c, dim, targ, start)
+        self.update_table()
 
     def __init__(self, **kwargs):
         super(MainWidget, self).__init__(**kwargs)
@@ -130,6 +163,8 @@ class MainWidget(Screen):
         self. reverse_map = dict(reversed(item) for item in self.forward_map.items())
         self.keyboard = Window.request_keyboard(self._activ_key, self)
         self.keyboard.bind(on_key_down=self.key_action)
+        self.iter_pop = IterPopup()
+        self.mag_pop = MagPopup()
 
 
 class GabApp(App):
