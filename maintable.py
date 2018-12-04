@@ -77,10 +77,10 @@ class MainTable:
         tab = self.table
         increament = start_value
         if not np.isnan(tab.loc[row, col]):
-            return
+            raise ValueError('Value chosen for iteration already exist')
         dim = np.array((self.table.loc[var, from_col:to_col - 1]), dtype=np.float64)
         if not np.any(np.isnan(dim)):
-            return
+            raise IndexError('The dimensions are already specified')
         dim[np.isnan(dim)] = 0
         prev_dim = np.sum(dim)
         for i in range(100):
@@ -90,7 +90,7 @@ class MainTable:
                 self.undo_changes()
                 return
             cur_dim = np.sum(dim)
-            print('prev: {}; curr: {}, target: {}'.format(prev_dim, cur_dim, target_dimension))
+            # print('prev: {}; curr: {}, target: {}'.format(prev_dim, cur_dim, target_dimension))
             if prev_dim < target_dimension < cur_dim or cur_dim < target_dimension < prev_dim:
                 increament *= -1 / 3
             elif target_dimension < prev_dim < cur_dim or target_dimension > prev_dim > cur_dim:
@@ -99,10 +99,11 @@ class MainTable:
                 increament *= 2
             prev_dim = cur_dim
             start_value += increament
-            if np.isclose(target_dimension - cur_dim, 0):
+            if np.any(np.isclose((10 * increament, cur_dim - target_dimension), 0)):
+                print(i)
                 break
             self.undo_changes()
-            #print('{} inc: {}, next_try: {}'.format(i, increament, start_value))
+            # print('{} inc: {}, next_try: {}'.format(i, increament, start_value))
 
     def change_lhi(self, value, func=0):
         if np.isnan(self.LHI):
@@ -115,8 +116,8 @@ class MainTable:
         if np.isnan(self.vignette):
             self.prev_tables.append(self.table.copy(True))
             self.vignette = float(value)
+            self.table.loc['vignette', 0] = self.vignette
             for i in range(self.columns):
-                self.table.loc['vignette', i] = self.vignette
                 self.analyse1(i)
             self.history_input.append('vignette set as {}'.format(value))
 
@@ -350,7 +351,7 @@ class MainTable:
             if ans == 'H':
                 val = alpha * f * (1 - V)
                 self.change_value('H', c, val, 16)
-            if ans == 'f' and not np.isclose(alpha * (V - 1), 0):
+            if ans == 'f' and not np.any(np.isclose((alpha * (V - 1), H), 0)):
                 val = H / (alpha * (1 - V))
                 self.change_value('f', c, val, 16)
 
@@ -462,13 +463,13 @@ class MainTable:
             Beta, Beta_1, Y, f = tab.loc['Beta', c], tab.loc['Beta', c - 1], tab.loc['Y', c], tab.loc['f', c]
             temp = dict(Beta=Beta, Beta_1=Beta_1, Y=Y, f=f)
             ans = self.check_if_nan(**temp)
-            if ans == '':
-                return
-            if ans == 'Beta_1' and not np.isclose(f, 0):
-                val = Beta - Y / f
+            '''if ans == '':
+                return'''
+            if 'Beta_1' in ans and not np.isclose(f, 0):
+                val = Beta if np.isclose(Y, 0) else Beta - Y / f
                 self.change_value('Beta', c - 1, val, 22)
-            if ans == 'Beta' and not np.isclose(f, 0):
-                val = Beta_1 + Y / f
+            if 'Beta' in ans and not np.isclose(f, 0):
+                val = Beta_1 if np.isclose(Y, 0) else Beta_1 + Y / f
                 self.change_value('Beta', c, val, 22)
             if ans == 'Y':
                 val = f * (Beta - Beta_1)
@@ -566,16 +567,16 @@ class MainTable:
             Beta, Y, Y1, d = tab.loc['Beta', c], tab.loc['Y', c], tab.loc['Y', c + 1], tab.loc['d', c]
             temp = dict(Beta=Beta, Y=Y, Y1=Y1, d=d)
             ans = self.check_if_nan(**temp)
-            if ans == '':
-                return
-            if ans == 'Y1':
-                val = Y - Beta * d
+            '''if ans == '':
+                return'''
+            if 'Y1' in ans:
+                val = Y if np.any(np.isclose((Beta, d), 0)) else Y - Beta * d
                 self.change_value('Y', c + 1, val, 27)
-            if ans == 'Y':
-                val = Y1 + Beta * d
+            if 'Y' in ans:
+                val = Y1 if np.any(np.isclose((Beta, d), 0)) else Y1 + Beta * d
                 self.change_value('Y', c, val, 27)
-            if ans == 'Beta' and not np.isclose(d, 0):
-                val = (Y - Y1) / d
+            if 'Beta' in ans and not np.isclose(d, 0):
+                val = 0 if np.isclose(Y - Y1, 0) else (Y - Y1) / d
                 self.change_value('Beta', c, val, 27)
             if ans == 'd' and not np.isclose(Beta, 0):
                 val = (Y - Y1) / Beta
