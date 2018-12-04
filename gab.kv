@@ -6,6 +6,7 @@
 #:set white (1, 1, 1, 1)
 #:set nan float('nan')
 #:import isnan math.isnan
+#:import Factory kivy.factory.Factory
 
 <EWidget@Widget>:
     size_hint: (1, 1)
@@ -45,6 +46,12 @@
     on_text_validate: app.main.validate_input(self)
     disabled: False if isnan(self.data) else True
 
+<PTextInput@CSTextInput>:
+    data: nan
+    text: '' if isnan(self.data) else '{:0.4f}'.format(self.data).rstrip('0').rstrip('.')
+    on_focus: app.main.help_popup(self)
+    on_text_validate: app.main.validate_popup_input(self)
+
 <CCheckBox@CheckBox>:
     height: 3 * sheight // 4
     size_hint_y: None
@@ -53,6 +60,18 @@
     height: 3 * sheight / 4
     size_hint_y: None
     pos_hint: {'center_x': 0.5}
+
+<CSpinnerOption@SpinnerOption>:
+    font_size: sfont
+    height: 3 * sheight / 4
+
+<CSpinner@Spinner>
+    size_hint: 1, None
+    height: 3 * sheight / 4
+    sync_height: True
+    font_size: sfont
+    option_cls: Factory.get("CSpinnerOption")
+
 
 <IterPopup>:
     title: 'Iteration'
@@ -98,27 +117,40 @@
                 CLabel:
                     text: 'From'
                     size_hint_x: 1
-                CSTextInput:
+                CSpinner:
+                    text: '0'
                     size_hint_x: 1
                     id: iter_from_input
+                    values: [str(item) for item in range(root.cols)]
                 CLabel:
                     text: 'To'
                     size_hint_x: 1
-                CSTextInput:
+                CSpinner:
+                    text: '0'
                     size_hint_x: 1
                     id: iter_to_input
-            CSTextInput:
+                    values: [str(item) for item in range(root.cols)]
+            PTextInput:
                 size_hint_x: 1
                 id: iter_target_input
-            CSTextInput:
+            PTextInput:
                 size_hint_x: 1
                 id: iter_start_input
-            CSTextInput:
+            CLabel:
+                text: 'Iterated parametr'
                 size_hint_x: 1
+            CSpinner
+                text: 'f'
+                size_hint: 1, None
+                height: 3 * sheight / 4
                 id: iter_row
-            CSTextInput:
-                size_hint_x: 1
+                values: ['f', 'd', 'H', '\u03B1', 'V', 'L', 'Y', '\u03B2', 'Q', 'T']
+            CSpinner:
+                text: '0'
+                size_hint: 1, None
+                height: 3 * sheight / 4
                 id: iter_col
+                values: [str(item) for item in range(root.cols)]
         EWidget:
         GBoxLayout:
             orientation: 'horizontal'
@@ -180,13 +212,15 @@
 
             GBoxLayout:
                 orientation: 'horizontal'
-                CSTextInput:
-                    size_hint_x: 1
+                CSpinner:
+                    text: '1'
                     id: mag_from_input
-                CSTextInput:
-                    size_hint_x: 1
+                    values: [str(item) for item in range(1, root.cols)]
+                CSpinner:
+                    text: '1'
                     id: mag_to_input
-            CSTextInput:
+                    values: [str(item) for item in range(1, root.cols)]
+            PTextInput:
                 size_hint_x: 1
                 id: mag_val_input
         EWidget:
@@ -375,3 +409,7 @@
             CLabel:
                 text: 'Info Label'
                 id: info_label
+                size_hint_x: 1
+                pos_hint: {'x': 0.1}
+                text_size: self.size
+                halign: 'left'

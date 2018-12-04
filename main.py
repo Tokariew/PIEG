@@ -3,6 +3,7 @@ from math import isnan
 from kivy.app import App
 from kivy.config import Config
 from kivy.core.window import Window
+from kivy.properties import NumericProperty
 from kivy.uix.behaviors import FocusBehavior
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.popup import Popup
@@ -11,8 +12,6 @@ from kivy.uix.recycleview import RecycleView
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.screenmanager import Screen, ScreenManager
 from maintable import MainTable
-
-Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
 
 
 class SelectableRecycleBoxLayout(FocusBehavior, RecycleBoxLayout):
@@ -31,11 +30,11 @@ class Col(RecycleDataViewBehavior, BoxLayout):
 
 
 class IterPopup(Popup):
-    pass
+    cols = NumericProperty(0)
 
 
 class MagPopup(Popup):
-    pass
+    cols = NumericProperty(0)
 
 
 class RV(RecycleView):
@@ -85,9 +84,20 @@ class MainWidget(Screen):
 
         print(instance.data, instance.parent.col_number, instance.param)
 
+    def validate_popup_input(self, instance):
+        instance.text = instance.text.replace(',', '.')
+        try:
+            instance.data = float(instance.text)
+        except ValueError:
+            instance.text = '' if isnan(instance.data) else '{:0.2f}'.format(instance.data).rstrip('0').rstrip('.')
+
     def help(self, instance):
         if not instance.focus:
             self.validate_input(instance)
+
+    def help_popup(self, instance):
+        if not instance.focus:
+            self.validate_popup_input(instance)
 
     def update_table(self):
         temp = self.table2.table.to_dict()
@@ -110,12 +120,16 @@ class MainWidget(Screen):
         self.ids.table.data = [{'col_number': i, 'f': nan, 'd': nan, 'h': nan, 'alpha': nan,
                                 'v': nan, 'l': nan, 'y1': nan, 'beta': nan, 'q': nan, 't': nan, 'phi': nan} for i in range(cols)]
         self.table2 = MainTable(cols)
+        self.cols = cols
+        self.iter_pop = IterPopup(cols=cols)
+        self.mag_pop = MagPopup(cols=cols)
 
     def key_action(self, key, keycode, text, modif):
-        if keycode[1] == 'z' and modif[0] == 'ctrl':
-            self.update_label('Undo')
-            self.table2.undo_changes()
-            self.update_table()
+        if len(modif) == 1:
+            if keycode[1] == 'z' and modif[0] == 'ctrl':
+                self.update_label('Undo')
+                self.table2.undo_changes()
+                self.update_table()
 
     def _activ_key(self, *args):
         """ The active keyboard is being closed. """
@@ -150,9 +164,16 @@ class MainWidget(Screen):
             dim = 'd'
         else:
             dim = 'L'
+        if row == '\u03B1':
+            row = 'alpha'
+        elif row == '\u03B2':
+            row = 'Beta'
         from_c, to_c, targ, start, col = float(from_c), float(to_c), float(targ), float(start), float(col)
-        self.table2.iterate(row, col, from_c, to_c, dim, targ, start)
-        self.update_table()
+        try:
+            self.table2.iterate(row, col, from_c, to_c, dim, targ, start)
+            self.update_table()
+        except ValueError as e:
+            self.update_label(str(e))
 
     def __init__(self, **kwargs):
         super(MainWidget, self).__init__(**kwargs)
@@ -163,11 +184,16 @@ class MainWidget(Screen):
         self. reverse_map = dict(reversed(item) for item in self.forward_map.items())
         self.keyboard = Window.request_keyboard(self._activ_key, self)
         self.keyboard.bind(on_key_down=self.key_action)
-        self.iter_pop = IterPopup()
-        self.mag_pop = MagPopup()
+        self.cols = 0
+        self.iter_pop = None
+        self.mag_pop = None
 
 
 class GabApp(App):
+    use_kivy_settings = False
+    Config.set('kivy', 'exit_on_escape', '0')
+    Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+
     def build(self):
         self.sm = ScreenManager()
         self.main = MainWidget(name='main')

@@ -62,16 +62,7 @@ class MainTable:
                 if from_col == item['from'] and to_col == item['to']:
                     return
             self.magnify.append({'from': from_col, 'to': to_col, 'magn': magn, 'type': var})
-
-        if len(self.magnify) > 0:
-            for i, elem in enumerate(self.magnify):
-                from_col, to_col = elem['from'], elem['to']
-                if elem['type'] == 'V':
-                    if not np.all(np.isnan((self.table.loc['alpha', from_col], self.table.loc['alpha', to_col]))):
-                        self.analyse44(i)
-                elif elem['type'] == 'Q':
-                    if not np.all(np.isnan((self.table.loc['Beta', from_col], self.table.loc['Beta', to_col]))):
-                        self.analyse45(i)
+            self.analise_mag()
 
     def iterate(self, row, col, from_col, to_col, var, target_dimension, start_value):
         tab = self.table
@@ -80,7 +71,7 @@ class MainTable:
             raise ValueError('Value chosen for iteration already exist')
         dim = np.array((self.table.loc[var, from_col:to_col - 1]), dtype=np.float64)
         if not np.any(np.isnan(dim)):
-            raise IndexError('The dimensions are already specified')
+            raise ValueError('The dimensions are already specified')
         dim[np.isnan(dim)] = 0
         prev_dim = np.sum(dim)
         for i in range(100):
@@ -88,7 +79,7 @@ class MainTable:
             dim = np.array((self.table.loc[var, from_col:to_col - 1]), dtype=np.float64)
             if np.any(np.isnan(dim)):
                 self.undo_changes()
-                return
+                raise ValueError('Not enough data for iteration')
             cur_dim = np.sum(dim)
             # print('prev: {}; curr: {}, target: {}'.format(prev_dim, cur_dim, target_dimension))
             if prev_dim < target_dimension < cur_dim or cur_dim < target_dimension < prev_dim:
@@ -121,6 +112,17 @@ class MainTable:
                 self.analyse1(i)
             self.history_input.append('vignette set as {}'.format(value))
 
+    def analise_mag(self):
+        if len(self.magnify) > 0:
+            for i, elem in enumerate(self.magnify):
+                from_col, to_col = elem['from'], elem['to']
+                if elem['type'] == 'V':
+                    if not np.all(np.isnan((self.table.loc['alpha', from_col], self.table.loc['alpha', to_col]))):
+                        self.analyse44(i)
+                elif elem['type'] == 'Q':
+                    if not np.all(np.isnan((self.table.loc['Beta', from_col], self.table.loc['Beta', to_col]))):
+                        self.analyse45(i)
+
     def analise_input(self, row, column):
         if row == MainTable.ind[0]:
             self.check_f_function(column)
@@ -142,15 +144,7 @@ class MainTable:
             self.check_q_function(column)
         elif row == MainTable.ind[9]:
             self.check_t_function(column)
-        if len(self.magnify) > 0:
-            for i, elem in enumerate(self.magnify):
-                from_col, to_col = elem['from'], elem['to']
-                if elem['type'] == 'V':
-                    if not np.all(np.isnan((self.table.loc['alpha', from_col], self.table.loc['alpha', to_col]))):
-                        self.analyse44(i)
-                elif elem['type'] == 'Q':
-                    if not np.all(np.isnan((self.table.loc['Beta', from_col], self.table.loc['Beta', to_col]))):
-                        self.analyse45(i)
+        self.analise_mag()
 
         self.check_lhi_function()
 
