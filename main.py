@@ -1,6 +1,8 @@
-from math import isnan
-import sys
 import os
+import sys
+from math import isnan
+
+import kivy.resources
 from kivy.app import App
 from kivy.config import Config
 from kivy.core.window import Window
@@ -13,7 +15,6 @@ from kivy.uix.recycleview import RecycleView
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.screenmanager import Screen, ScreenManager
 from maintable import MainTable
-import kivy.resources
 
 
 def resourcePath():
