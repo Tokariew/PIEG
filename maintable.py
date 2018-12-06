@@ -902,9 +902,10 @@ class MainTable:
         plt.tight_layout()
         plt.savefig('test.png', dpi=300)
         plt.ion()
-        plt.show()
+
         if undo:
             self.undo_changes()
+        plt.show()
 
     def draw_stop(self, x, y, ax):
         ax.plot((x, x), (y, y + 10), marker='_', markevery=2, color='k', markersize=10)

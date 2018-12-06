@@ -1,5 +1,7 @@
 from math import isnan
-
+import sys
+import os
+os.environ['KIVY_GL_BACKEND'] = 'sdl2'
 from kivy.app import App
 from kivy.config import Config
 from kivy.core.window import Window
@@ -12,7 +14,13 @@ from kivy.uix.recycleview import RecycleView
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.screenmanager import Screen, ScreenManager
 from maintable import MainTable
+import kivy.resources
+def resourcePath():
+    '''Returns path containing content - either locally or in pyinstaller tmp file'''
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS)
 
+    return os.path.join(os.path.abspath("."))
 
 class SelectableRecycleBoxLayout(FocusBehavior, RecycleBoxLayout):
     ''' Adds selection and focus behaviour to the view. '''
@@ -200,8 +208,11 @@ class GabApp(App):
         self.nos = NosWidget(name='nos')
         self.sm.add_widget(self.nos)
         self.sm.add_widget(self.main)
+        self.title = 'PIEG'
+        self.icon = 'data/pieg.png'
         return self.sm
 
 
 if __name__ == '__main__':
+    kivy.resources.resource_add_path(resourcePath())
     GabApp().run()
