@@ -41,20 +41,20 @@
 <CTextInput@CSTextInput>:
     data: nan
     param: ''
-    text: '' if isnan(self.data) else '{:0.4f}'.format(self.data).rstrip('0').rstrip('.')
-    on_focus: app.main.help(self)
-    on_text_validate: app.main.validate_input(self)
+    text: '' if isnan(self.data) else '{:g}'.format(self.data)
+    on_focus: app.main.validate_input(self)
     disabled: False if isnan(self.data) else True
 
 <PTextInput@CSTextInput>:
-    data: nan
-    text: '' if isnan(self.data) else '{:0.4f}'.format(self.data).rstrip('0').rstrip('.')
-    on_focus: app.main.help_popup(self)
-    on_text_validate: app.main.validate_popup_input(self)
+    data: 1
+    text: '' if isnan(self.data) else '{:g}'.format(self.data)
+    on_focus: app.main.validate_popup_input(self)
+    hint_text: '1'
 
 <CCheckBox@CheckBox>:
     height: 3 * sheight // 4
     size_hint_y: None
+    allow_no_selection: False
 
 <GBoxLayout@BoxLayout>:
     height: 3 * sheight / 4
@@ -320,9 +320,18 @@
                 text: 'Number of\nelements:'
             CSTextInput:
                 input_filter: 'int'
-                on_focus: app.nos.help(self)
                 on_text_validate: app.nos.validate_input(self)
         EWidget
+        BoxLayout:
+            size_hint_y: None
+            height: sheight
+            CLabel:
+                text: 'Info Label'
+                id: info_label
+                size_hint_x: 1
+                pos_hint: {'x': 0.1}
+                text_size: self.size
+                halign: 'left'
 
 <MainWidget>:
     BoxLayout:
@@ -395,7 +404,7 @@
             CLabel:
                 id: lhi_label
                 data: nan
-                text: 'LHI: {:0.2f}'.format(float(self.data)) if not isnan(float(self.data)) else 'LHI:'
+                text: 'LHI: {:g}'.format(float(self.data)) if not isnan(float(self.data)) else 'LHI:'
             CLabel:
                 text: 'vignette'
             CTextInput:

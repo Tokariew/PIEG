@@ -69,9 +69,17 @@ class MainTable:
         increament = start_value
         if not np.isnan(tab.loc[row, col]):
             raise ValueError('Value chosen for iteration already exist')
-        dim = np.array((self.table.loc[var, from_col:to_col - 1]), dtype=np.float64)
+        if from_col == to_col:
+            raise ValueError('You can just specify value…')
+        dim = np.array((self.table.loc[var, from_col:to_col - 1]))
+        if np.any(dim == ''):
+            raise ValueError('{} can be only iterated between column 1 and {}'.format(var, self.columns - 2))
+        dim = dim.astype(np.float64)
         if not np.any(np.isnan(dim)):
             raise ValueError('The dimensions are already specified')
+        if np.any(dim == ''):
+            raise ValueError('{} can be only iterated between column 1 and {}'.format(row, self.columns - 2))
+
         dim[np.isnan(dim)] = 0
         prev_dim = np.sum(dim)
         for i in range(100):

@@ -1,7 +1,6 @@
 from math import isnan
 import sys
 import os
-os.environ['KIVY_GL_BACKEND'] = 'sdl2'
 from kivy.app import App
 from kivy.config import Config
 from kivy.core.window import Window
@@ -15,12 +14,15 @@ from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.screenmanager import Screen, ScreenManager
 from maintable import MainTable
 import kivy.resources
+
+
 def resourcePath():
     '''Returns path containing content - either locally or in pyinstaller tmp file'''
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS)
 
     return os.path.join(os.path.abspath("."))
+
 
 class SelectableRecycleBoxLayout(FocusBehavior, RecycleBoxLayout):
     ''' Adds selection and focus behaviour to the view. '''
@@ -56,56 +58,49 @@ class NosWidget(Screen):
         super(NosWidget, self).__init__(**kwargs)
 
     def validate_input(self, instance):
-        elem = int(instance.text)
-        app = App.get_running_app()
-        app.main.gen_table(elem + 1)
-        app.sm.current = 'main'
-        instance.text = ''
-
-    def help(self, instance):
-        print('nos')
+        try:
+            elem = int(instance.text)
+            app = App.get_running_app()
+            app.main.gen_table(elem + 1)
+            app.sm.current = 'main'
+            instance.text = ''
+        except ValueError:
+            self.ids.info_label.text = 'Please, enter the correct number of columns'
 
 
 class MainWidget(Screen):
-    def validate_input(self, instance):
-        if not isnan(instance.data):
-            return
-        instance.text = instance.text.replace(',', '.')
-        try:
-            instance.data = float(instance.text)
-        except ValueError:
-            instance.text = '' if isnan(instance.data) else '{:0.2f}'.format(instance.data).rstrip('0').rstrip('.')
-        if isnan(instance.data):
-            return
-        if instance.param == 'vignette':
-            if float(instance.text) > 1 or float(instance.text) < 0:
-                instance.data = float('nan')
-                return
-            self.table2.set_vignetting(float(instance.text))
-            self.update_table()
-            return
-        col = int(instance.parent.col_number)
-        row = self.forward_map[instance.param]
-        val = float(instance.data)
-        self.table2.change_value(row, col, val)
-        self.update_table()
 
-        print(instance.data, instance.parent.col_number, instance.param)
+    def validate_input(self, instance):
+        if not instance.focus:
+            if not isnan(instance.data):
+                return
+            instance.text = instance.text.replace(',', '.')
+            try:
+                instance.data = float(instance.text)
+            except ValueError:
+                instance.text = '' if isnan(instance.data) else '{:g}'.format(instance.data)
+            if isnan(instance.data):
+                return
+            if instance.param == 'vignette':
+                if float(instance.text) > 1 or float(instance.text) < 0:
+                    instance.data = float('nan')
+                    return
+                self.table2.set_vignetting(float(instance.text))
+                self.update_table()
+                return
+            col = int(instance.parent.col_number)
+            row = self.forward_map[instance.param]
+            val = float(instance.data)
+            self.table2.change_value(row, col, val)
+            self.update_table()
 
     def validate_popup_input(self, instance):
-        instance.text = instance.text.replace(',', '.')
-        try:
-            instance.data = float(instance.text)
-        except ValueError:
-            instance.text = '' if isnan(instance.data) else '{:0.2f}'.format(instance.data).rstrip('0').rstrip('.')
-
-    def help(self, instance):
         if not instance.focus:
-            self.validate_input(instance)
-
-    def help_popup(self, instance):
-        if not instance.focus:
-            self.validate_popup_input(instance)
+            instance.text = instance.text.replace(',', '.')
+            try:
+                instance.data = float(instance.text)
+            except ValueError:
+                instance.text = '{:g}'.format(instance.data)
 
     def update_table(self):
         temp = self.table2.table.to_dict()
@@ -176,7 +171,10 @@ class MainWidget(Screen):
             row = 'alpha'
         elif row == '\u03B2':
             row = 'Beta'
-        from_c, to_c, targ, start, col = float(from_c), float(to_c), float(targ), float(start), float(col)
+        if self.table2.table.loc[row, int(col)] == '':
+            self.update_label("Can't iterate this value")
+            return
+        from_c, to_c, targ, start, col = int(from_c), int(to_c), float(targ), float(start), int(col)
         try:
             self.table2.iterate(row, col, from_c, to_c, dim, targ, start)
             self.update_table()
