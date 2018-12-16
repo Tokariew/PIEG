@@ -1,11 +1,17 @@
 import os
 import sys
 from math import isnan
+from os import mkdir
+from os.path import expanduser, join
+
+import numpy as np
+from imageio import imsave
 
 import kivy.resources
 from kivy.app import App
 from kivy.config import Config
 from kivy.core.window import Window
+from kivy.graphics import ClearBuffers, Fbo, Scale, Translate
 from kivy.properties import NumericProperty
 from kivy.uix.behaviors import FocusBehavior
 from kivy.uix.boxlayout import BoxLayout
@@ -57,6 +63,7 @@ class RV(RecycleView):
 class NosWidget(Screen):
     def __init__(self, **kwargs):
         super(NosWidget, self).__init__(**kwargs)
+        self.noe_input = self.ids.noe_input
 
     def validate_input(self, instance):
         try:
@@ -65,6 +72,8 @@ class NosWidget(Screen):
             app.main.gen_table(elem + 1)
             app.sm.current = 'main'
             instance.text = ''
+            app.main.focus_row = ''
+            app.main.focus_column = ''
         except ValueError:
             self.ids.info_label.text = 'Please, enter the correct number of columns'
 
@@ -72,6 +81,9 @@ class NosWidget(Screen):
 class MainWidget(Screen):
 
     def validate_input(self, instance):
+        if instance.focus:
+            self.focus_row = instance.param
+            self.focus_column = instance.parent.col_number
         if not instance.focus:
             if not isnan(instance.data):
                 return
@@ -134,6 +146,47 @@ class MainWidget(Screen):
                 self.update_label('Undo')
                 self.table2.undo_changes()
                 self.update_table()
+        app = App.get_running_app()
+        if app.sm.current == 'main' and not self.focus_column == '' and not self.focus_row == '':
+            if keycode[1] == 'left':
+                all = len(self.ids.table.children[0].children)
+                col = all - self.focus_column
+                if col > 0 and col < all:
+                    for children in self.ids.table.children[0].children[col].children:
+                        if children.param == self.focus_row:
+                            children.focus = True
+            if keycode[1] == 'right':
+                all = len(self.ids.table.children[0].children)
+                col = all - (self.focus_column + 2)
+                if col >= 0 and col < all:
+                    for children in self.ids.table.children[0].children[col].children:
+                        try:
+                            if children.param == self.focus_row:
+                                children.focus = True
+                        except AttributeError:
+                            pass
+            if keycode[1] == 'up':
+                all = len(self.ids.table.children[0].children)
+                col = all - (self.focus_column + 1)
+                index = self.ids.table.children[0].children[col].par_q.index(self.focus_row) - 1
+                param = self.ids.table.children[0].children[col].par_q[index]
+                for children in self.ids.table.children[0].children[col].children:
+                    try:
+                        if children.param == param:
+                            children.focus = True
+                    except AttributeError:
+                        pass
+            if keycode[1] == 'down':
+                all = len(self.ids.table.children[0].children)
+                col = all - (self.focus_column + 1)
+                index = self.ids.table.children[0].children[col].par_q.index(self.focus_row) + 1
+                param = self.ids.table.children[0].children[col].par_q[index]
+                for children in self.ids.table.children[0].children[col].children:
+                    try:
+                        if children.param == param:
+                            children.focus = True
+                    except AttributeError:
+                        pass
 
     def _activ_key(self, *args):
         """ The active keyboard is being closed. """
@@ -146,11 +199,13 @@ class MainWidget(Screen):
             self.update_label('Not enough data')
 
     def export(self):
-        self.table2.table.to_csv('out.csv')
+        name = join(self.home, 'out.csv')
+        self.table2.table.to_csv(name)
 
-    def debug(self):
-        with open('debug.log', 'w') as file:
-            for line in self.table2.history:
+    def history(self):
+        name = join(self.home, 'history.log')
+        with open(name, 'w') as file:
+            for line in self.table2.history_input:
                 file.write('{}\n'.format(line))
 
     def update_label(self, msg):
@@ -182,6 +237,38 @@ class MainWidget(Screen):
         except ValueError as e:
             self.update_label(str(e))
 
+    def capture(self):
+        name = join(self.home, 'screen.png')
+        self.export_png(name)
+
+    def export_png(self, name):
+        print(self.home)
+        if self.parent is not None:
+            canvas_parent_index = self.parent.canvas.indexof(self.canvas)
+            if canvas_parent_index > -1:
+                self.parent.canvas.remove(self.canvas)
+
+        fbo = Fbo(size=self.size, with_stencilbuffer=True)
+
+        with fbo:
+            ClearBuffers()
+            Scale(1, -1, 1)
+            Translate(-self.x, -self.y - self.height, 0)
+
+        fbo.add(self.canvas)
+        fbo.draw()
+        test = np.frombuffer(fbo.texture.pixels, dtype=np.uint8)
+        test = np.copy(test.reshape((self.height, self.width, 4)))
+        alpha = -test[:, :, -1]
+        test[:, :, -1] = alpha
+        imsave(name, -test)
+        fbo.remove(self.canvas)
+
+        if self.parent is not None and canvas_parent_index > -1:
+            self.parent.canvas.insert(canvas_parent_index, self.canvas)
+
+        return True
+
     def __init__(self, **kwargs):
         super(MainWidget, self).__init__(**kwargs)
         self.table = self.ids.table.data
@@ -194,6 +281,13 @@ class MainWidget(Screen):
         self.cols = 0
         self.iter_pop = None
         self.mag_pop = None
+        self.focus_column = ''
+        self.focus_row = ''
+        self.home = join(expanduser('~'), 'Documents', 'PIEG')
+        try:
+            mkdir(self.home)
+        except FileExistsError:
+            pass
 
 
 class GabApp(App):

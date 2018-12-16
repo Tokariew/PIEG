@@ -7,7 +7,7 @@
 #:set nan float('nan')
 #:import isnan math.isnan
 #:import Factory kivy.factory.Factory
-
+#:import Window kivy.core.window
 <EWidget@Widget>:
     size_hint: (1, 1)
     width: root.width
@@ -250,6 +250,7 @@
     q: nan
     t: nan
     phi: nan
+    par_q: ['f', 'd', 'h', 'alpha', 'v', 'l', 'y1', 'beta', 'q', 't', 'phi']
     CLabel:
         text: str(root.col_number)
     CTextInput:
@@ -310,6 +311,7 @@
         orientation: 'horizontal'
 
 <NosWidget>:
+    id: nos
     BoxLayout:
         orientation: 'vertical'
         BoxLayout:
@@ -319,7 +321,9 @@
             CLabel:
                 text: 'Number of\nelements:'
             CSTextInput:
+                id: noe_input
                 input_filter: 'int'
+                focus: True
                 on_text_validate: app.nos.validate_input(self)
         EWidget
         BoxLayout:
@@ -334,7 +338,9 @@
                 halign: 'left'
 
 <MainWidget>:
+    id:main
     BoxLayout:
+        background_color: 0,0,1,.5
         orientation: 'vertical'
         BoxLayout:
             orientation: 'horizontal'
@@ -345,21 +351,25 @@
                 on_release: app.sm.current = 'nos'
                 on_release: lhi_label.data = nan
                 on_release: vignette_input.data = nan
+                on_release: app.nos.noe_input.focus = True
             CButton:
                 text: 'Magnify'
-                on_release: app.main.mag_pop.open()
+                on_release: main.mag_pop.open()
             CButton:
                 text: 'Iteration'
-                on_release: app.main.iter_pop.open()
+                on_release: main.iter_pop.open()
             CButton:
                 text: 'Plot'
-                on_release: app.main.plot()
+                on_release: main.plot()
             CButton:
                 text: 'Export'
-                on_release: app.main.export()
+                on_release: main.export()
 			CButton:
-                text: 'debug'
-                on_release: app.main.debug()
+                text: 'History'
+                on_release: main.history()
+            CButton:
+                text: 'screenshot'
+                on_release: main.capture()
         BoxLayout:
             orientation: 'horizontal'
             pos_hint: {'center_x': 0.5}
