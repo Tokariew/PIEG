@@ -1,0 +1,30 @@
+table=MainTable(4)
+cval = table.change_value
+cval('f',2,1e20)
+cval('H',0,0)
+cval('H',3,0)
+cval('alpha',0,-0.15)
+cval('V',1,-5)
+cval('L',1,189)
+cval('Y',0,-1.6)
+cval('Y',2,0)
+cval('Beta',0,0)
+
+table=MainTable(6)
+cval = table.change_value
+cval('f',3,1e20)
+cval('d',2,10)
+cval('H',0,0)
+cval('H',3,21.6)
+cval('alpha',1,0)
+cval('Y',0,-4.12)
+cval('Y',3,0)
+cval('Y',5,0)
+cval('Beta',4,0.004)
+cval('Q',4,-41.7)
+cval('d',4,3500)
+cval('d',1,15)
+cval('H',4,0)
+
+
+??H4=0??

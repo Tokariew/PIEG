@@ -3,6 +3,7 @@
 #:set sheight dp(40)
 #:set sfont sp(13)
 #:set dark (34/255, 34/255, 34/255, 1)
+#:set green (34/255, 139/255, 34/255, 1)
 #:set white (1, 1, 1, 1)
 #:set nan float('nan')
 #:import isnan math.isnan
@@ -42,8 +43,13 @@
     data: nan
     param: ''
     text: '' if isnan(self.data) else '{:g}'.format(self.data)
-    on_focus: app.main.validate_input(self)
     disabled: False if isnan(self.data) else True
+    user: False
+    on_focus: app.main.validate_input(self)
+    on_text: app.main.help_me(self)
+    #background_disabled_normal: ''
+    #disabled_color: green if self.user else white
+    background_color: green if self.user else white
 
 <PTextInput@CSTextInput>:
     data: 1
@@ -255,41 +261,41 @@
         text: str(root.col_number)
     CTextInput:
         data: root.f
-        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else white
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else green if self.user else white
         param: 'f'
     CTextInput:
         data: root.d
-        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) else white
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) else green if self.user else white
         param: 'd'
     CTextInput:
         data: root.h
         param: 'h'
     CTextInput:
         data: root.alpha
-        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) else white
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) else green if self.user else green if self.user else white
         param: 'alpha'
     CTextInput:
         data: root.v
-        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else white
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else green if self.user else white
         param: 'v'
     CTextInput:
         data: root.l
-        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else white
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else green if self.user else white
         param: 'l'
     CTextInput:
         data: root.y1
         param: 'y1'
     CTextInput:
         data: root.beta
-        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) else white
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) else green if self.user else white
         param: 'beta'
     CTextInput:
         data: root.q
-        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else white
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else green if self.user else white
         param: 'q'
     CTextInput:
         data: root.t
-        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else white
+        background_color: dark if root.col_number + 1 == len(app.main.ids.table.data) or root.col_number == 0 else green if self.user else white
         param: 't'
     CLabel:
         #data: root.phi

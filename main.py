@@ -83,6 +83,9 @@ class MainWidget(Screen):
     def validate_input(self, instance):
         if instance.focus:
             self.focus_row = instance.param
+            if self.focus_row == 'vignette':
+                self.focus_row = ''
+                return
             self.focus_column = instance.parent.col_number
         if not instance.focus:
             if not isnan(instance.data):
@@ -103,9 +106,28 @@ class MainWidget(Screen):
                 return
             col = int(instance.parent.col_number)
             row = self.forward_map[instance.param]
+            if self.table2.table.loc[row, col] == '':
+                instance.text = ''
+                return
             val = float(instance.data)
+            instance.user = True
+            print(instance.user)
             self.table2.change_value(row, col, val)
             self.update_table()
+
+    def help_me(self, instance):
+        if instance.param == 'vignette':
+            return
+        col = int(instance.parent.col_number)
+        row = self.forward_map[instance.param]
+        print(row, col, self.table2.table.loc[row, col])
+        if self.table2.table.loc[row, col] == '':
+            return
+        if instance.text != '' and instance.user:
+            return
+        if isnan(self.table2.table.loc[row, col]):
+            instance.user = False
+            print(col, row, 'set as False')
 
     def validate_popup_input(self, instance):
         if not instance.focus:
