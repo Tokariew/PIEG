@@ -237,6 +237,9 @@ class MainWidget(Screen):
         var = 'V' if v_check else 'Q'
         self.table2.magnification(float(from_col), float(to_col), float(val), var)
         self.update_table()
+        tmp = ['Magnification {:.2f}, from surface {:.0f} to {:.0f}, type {}'.format(
+            dic['magn'], dic['from'], dic['to'], dic['type']) for dic in self.table2.magnify]
+        self.ids.magnify_info.text = '\n'.join(tmp)
 
     def iterate(self, d_check, L_check, from_c, to_c, targ, start, row, col):
         if not (d_check or L_check):

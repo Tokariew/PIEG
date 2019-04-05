@@ -23,6 +23,14 @@
     halign: 'center'
     valign: 'middle'
 
+<CLabelInfo@Label>:
+    font_size: sfont
+    size_hint: None, None
+    pos_hint: {'x': 0}
+    size_hint_x: 1
+    halign: 'left'
+    valign: 'middle'
+
 <CButton@Button>:
     width: swidth
     height: 3 * sheight // 4
@@ -427,14 +435,15 @@
                 id: vignette_input
                 param: 'vignette'
                 data: nan
+        CLabelInfo:
+            id: magnify_info
+            text: ''
+            text_size: self.size
+            pos_hint: {'x': 0.01}
         EWidget
-        BoxLayout:
-            size_hint_y: None
-            height: sheight
-            CLabel:
-                text: 'Info Label'
-                id: info_label
-                size_hint_x: 1
-                pos_hint: {'x': 0.1}
-                text_size: self.size
-                halign: 'left'
+        CLabel:
+            text: 'Info Label'
+            id: info_label
+            pos_hint: {'x': 0.01}
+            text_size: self.size
+            halign: 'left'
