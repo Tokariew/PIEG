@@ -4,6 +4,7 @@ from math import isnan
 from os import mkdir
 from os.path import expanduser, join
 
+import matplotlib as mpl
 import numpy as np
 from imageio import imsave
 
@@ -309,6 +310,7 @@ class MainWidget(Screen):
         self.focus_column = ''
         self.focus_row = ''
         self.home = join(expanduser('~'), 'Documents', 'PIEG')
+        mpl.rcParams["savefig.directory"] = self.home
         try:
             mkdir(self.home)
         except FileExistsError:
