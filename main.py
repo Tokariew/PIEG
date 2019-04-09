@@ -3,14 +3,23 @@ import sys
 from math import isnan
 from os import mkdir
 from os.path import expanduser, join
+import webbrowser
 
 import matplotlib as mpl
 import numpy as np
 from imageio import imsave
 
+from kivy.config import Config
+
+Config.set('kivy', 'exit_on_escape', '0')
+Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+Config.set('graphics', 'minimum_width', '720')
+Config.set('graphics', 'minimum_height', '576')
+Config.set('graphics', 'width', '720')
+Config.set('graphics', 'height', '576')
+
 import kivy.resources
 from kivy.app import App
-from kivy.config import Config
 from kivy.core.window import Window
 from kivy.graphics import ClearBuffers, Fbo, Scale, Translate
 from kivy.properties import NumericProperty
@@ -22,6 +31,9 @@ from kivy.uix.recycleview import RecycleView
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.screenmanager import Screen, ScreenManager
 from maintable import MainTable
+
+
+mpl.use('QT5Agg')
 
 
 def resourcePath():
@@ -112,7 +124,6 @@ class MainWidget(Screen):
                 return
             val = float(instance.data)
             instance.user = True
-            print(instance.user)
             self.table2.change_value(row, col, val)
             self.update_table()
 
@@ -121,14 +132,12 @@ class MainWidget(Screen):
             return
         col = int(instance.parent.col_number)
         row = self.forward_map[instance.param]
-        print(row, col, self.table2.table.loc[row, col])
         if self.table2.table.loc[row, col] == '':
             return
         if instance.text != '' and instance.user:
             return
         if isnan(self.table2.table.loc[row, col]):
             instance.user = False
-            print(col, row, 'set as False')
 
     def validate_popup_input(self, instance):
         if not instance.focus:
@@ -268,7 +277,6 @@ class MainWidget(Screen):
         self.export_png(name)
 
     def export_png(self, name):
-        print(self.home)
         if self.parent is not None:
             canvas_parent_index = self.parent.canvas.indexof(self.canvas)
             if canvas_parent_index > -1:
@@ -295,6 +303,9 @@ class MainWidget(Screen):
 
         return True
 
+    def help(self):
+        webbrowser.open("https://github.com/Tokariew/PIEG/wiki")
+
     def __init__(self, **kwargs):
         super(MainWidget, self).__init__(**kwargs)
         self.table = self.ids.table.data
@@ -319,8 +330,6 @@ class MainWidget(Screen):
 
 class GabApp(App):
     use_kivy_settings = False
-    Config.set('kivy', 'exit_on_escape', '0')
-    Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
 
     def build(self):
         self.sm = ScreenManager()

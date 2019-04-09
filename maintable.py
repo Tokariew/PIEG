@@ -89,7 +89,6 @@ class MainTable:
                 self.undo_changes()
                 raise ValueError('Not enough data for iteration')
             cur_dim = np.sum(dim)
-            # print('prev: {}; curr: {}, target: {}'.format(prev_dim, cur_dim, target_dimension))
             if prev_dim < target_dimension < cur_dim or cur_dim < target_dimension < prev_dim:
                 increament *= -1 / 3
             elif target_dimension < prev_dim < cur_dim or target_dimension > prev_dim > cur_dim:
@@ -99,10 +98,8 @@ class MainTable:
             prev_dim = cur_dim
             start_value += increament
             if np.any(np.isclose((10 * increament, cur_dim - target_dimension), 0)):
-                print(i)
                 break
             self.undo_changes()
-            # print('{} inc: {}, next_try: {}'.format(i, increament, start_value))
 
     def change_lhi(self, value, func=0):
         if np.isnan(self.LHI):

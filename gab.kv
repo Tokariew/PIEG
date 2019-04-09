@@ -340,16 +340,15 @@
                 focus: True
                 on_text_validate: app.nos.validate_input(self)
         EWidget
-        BoxLayout:
+        CLabel:
+            text: 'Info Label'
+            id: info_label
             size_hint_y: None
             height: sheight
-            CLabel:
-                text: 'Info Label'
-                id: info_label
-                size_hint_x: 1
-                pos_hint: {'x': 0.1}
-                text_size: self.size
-                halign: 'left'
+            size_hint_x: 1
+            pos_hint: {'x': 0.01}
+            text_size: self.size
+            halign: 'left'
 
 <MainWidget>:
     id:main
@@ -382,8 +381,11 @@
                 text: 'History'
                 on_release: main.history()
             CButton:
-                text: 'screenshot'
+                text: 'Screenshot'
                 on_release: main.capture()
+            CButton:
+                text: 'Help'
+                on_release: main.help()
         BoxLayout:
             orientation: 'horizontal'
             pos_hint: {'center_x': 0.5}
@@ -447,3 +449,4 @@
             pos_hint: {'x': 0.01}
             text_size: self.size
             halign: 'left'
+            size_hint_x: 1
