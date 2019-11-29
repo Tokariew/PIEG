@@ -335,12 +335,13 @@ class GabApp(App):
     use_kivy_settings = False
 
     def build(self):
+        self.version = '19.11'
         self.sm = ScreenManager()
         self.main = MainWidget(name='main')
         self.nos = NosWidget(name='nos')
         self.sm.add_widget(self.nos)
         self.sm.add_widget(self.main)
-        self.title = 'PIEG'
+        self.title = f'PIEG {self.version}'
         self.icon = 'data/pieg.png'
         return self.sm
 
