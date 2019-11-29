@@ -1,25 +1,16 @@
 import os
 import sys
+import webbrowser
 from math import isnan
 from os import mkdir
 from os.path import expanduser, join
-import webbrowser
 
+import kivy.resources
 import matplotlib as mpl
 import numpy as np
 from imageio import imsave
-
-from kivy.config import Config
-
-Config.set('kivy', 'exit_on_escape', '0')
-Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
-Config.set('graphics', 'minimum_width', '720')
-Config.set('graphics', 'minimum_height', '576')
-Config.set('graphics', 'width', '720')
-Config.set('graphics', 'height', '576')
-
-import kivy.resources
 from kivy.app import App
+from kivy.config import Config
 from kivy.core.window import Window
 from kivy.graphics import ClearBuffers, Fbo, Scale, Translate
 from kivy.properties import NumericProperty
@@ -30,7 +21,15 @@ from kivy.uix.recycleboxlayout import RecycleBoxLayout
 from kivy.uix.recycleview import RecycleView
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.screenmanager import Screen, ScreenManager
+
 from maintable import MainTable
+
+Config.set('kivy', 'exit_on_escape', '0')
+Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+Config.set('graphics', 'minimum_width', '720')
+Config.set('graphics', 'minimum_height', '576')
+Config.set('graphics', 'width', '720')
+Config.set('graphics', 'height', '576')
 
 
 mpl.use('QT5Agg')
@@ -173,11 +172,15 @@ class MainWidget(Screen):
         self.mag_pop = MagPopup(cols=cols)
 
     def key_action(self, key, keycode, text, modif):
-        if len(modif) == 1:
-            if keycode[1] == 'z' and modif[0] == 'ctrl':
+        if len(modif) >= 1:
+            print(modif, keycode)
+            if keycode[1] == 'z' and 'ctrl' in modif:
                 self.update_label('Undo')
-                self.table2.undo_changes()
-                self.update_table()
+                try:
+                    self.table2.undo_changes()
+                    self.update_table()
+                except AttributeError:
+                    pass
         app = App.get_running_app()
         if app.sm.current == 'main' and not self.focus_column == '' and not self.focus_row == '':
             if keycode[1] == 'left':
@@ -343,5 +346,16 @@ class GabApp(App):
 
 
 if __name__ == '__main__':
+    import traceback
+    from datetime import datetime
     kivy.resources.resource_add_path(resourcePath())
-    GabApp().run()
+    try:
+        GabApp().run()
+    except:
+        app = App.get_running_app()
+        err_time = datetime.now().isoformat(timespec='minutes').replace(':', '-')
+        log_name = join(app.main.home, f'log_{err_time}.txt')
+        with open(log_name, 'w') as log_file:
+            traceback.print_exc(file=log_file)
+        raise Exception('Exit found abruptly')
+        app.main.history()
