@@ -173,11 +173,15 @@ class MainWidget(Screen):
         self.mag_pop = MagPopup(cols=cols)
 
     def key_action(self, key, keycode, text, modif):
-        if len(modif) == 1:
-            if keycode[1] == 'z' and modif[0] == 'ctrl':
+        if len(modif) >= 1:
+            print(modif, keycode)
+            if keycode[1] == 'z' and 'ctrl' in modif:
                 self.update_label('Undo')
-                self.table2.undo_changes()
-                self.update_table()
+                try:
+                    self.table2.undo_changes()
+                    self.update_table()
+                except AttributeError:
+                    pass
         app = App.get_running_app()
         if app.sm.current == 'main' and not self.focus_column == '' and not self.focus_row == '':
             if keycode[1] == 'left':
