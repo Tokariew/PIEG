@@ -46,10 +46,13 @@ class MainTable:
                 self.analise_input(row, column)
 
     def undo_changes(self):
-        self.table = self.prev_tables.pop()
-        self.history_input.pop()
-        self.vignette = self.table.loc['vignette', 0]
-        self.LHI = self.table.loc['lhi', 0]
+        try:
+            self.table = self.prev_tables.pop()
+            self.history_input.pop()
+            self.vignette = self.table.loc['vignette', 0]
+            self.LHI = self.table.loc['lhi', 0]
+        except IndexError:
+            pass
 
     def magnification(self, from_col, to_col, magn, var):
         if from_col > to_col:
