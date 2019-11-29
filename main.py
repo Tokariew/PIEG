@@ -347,5 +347,16 @@ class GabApp(App):
 
 
 if __name__ == '__main__':
+    import traceback
+    from datetime import datetime
     kivy.resources.resource_add_path(resourcePath())
-    GabApp().run()
+    try:
+        GabApp().run()
+    except:
+        app = App.get_running_app()
+        err_time = datetime.now().isoformat(timespec='minutes').replace(':', '-')
+        log_name = join(app.main.home, f'log_{err_time}.txt')
+        with open(log_name, 'w') as log_file:
+            traceback.print_exc(file=log_file)
+        raise Exception('Exit found abruptly')
+        app.main.history()
