@@ -1,25 +1,16 @@
 import os
 import sys
+import webbrowser
 from math import isnan
 from os import mkdir
 from os.path import expanduser, join
-import webbrowser
 
+import kivy.resources
 import matplotlib as mpl
 import numpy as np
 from imageio import imsave
-
-from kivy.config import Config
-
-Config.set('kivy', 'exit_on_escape', '0')
-Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
-Config.set('graphics', 'minimum_width', '720')
-Config.set('graphics', 'minimum_height', '576')
-Config.set('graphics', 'width', '720')
-Config.set('graphics', 'height', '576')
-
-import kivy.resources
 from kivy.app import App
+from kivy.config import Config
 from kivy.core.window import Window
 from kivy.graphics import ClearBuffers, Fbo, Scale, Translate
 from kivy.properties import NumericProperty
@@ -30,7 +21,15 @@ from kivy.uix.recycleboxlayout import RecycleBoxLayout
 from kivy.uix.recycleview import RecycleView
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
 from kivy.uix.screenmanager import Screen, ScreenManager
+
 from maintable import MainTable
+
+Config.set('kivy', 'exit_on_escape', '0')
+Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+Config.set('graphics', 'minimum_width', '720')
+Config.set('graphics', 'minimum_height', '576')
+Config.set('graphics', 'width', '720')
+Config.set('graphics', 'height', '576')
 
 
 mpl.use('QT5Agg')
